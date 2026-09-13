@@ -37,6 +37,9 @@ services:
       APP_VERSION: ${APP_VERSION:-0.1.0}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://turio:replace_me@postgres:5432/turio}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      # Development default only. Any shared or deployed environment must set
+      # SECRET_KEY explicitly - tokens signed with this value are forgeable.
+      SECRET_KEY: ${SECRET_KEY:-insecure_dev_only_replace_before_deploying}
     ports:
       - "8000:8000"
     depends_on:

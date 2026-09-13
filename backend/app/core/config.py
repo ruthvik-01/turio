@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_version: str = "0.1.0"
     database_url: str
+
+    # No default: an unsigned JWT is worse than a service that refuses to boot.
+    secret_key: str
+    access_token_ttl_minutes: int = 15
+    refresh_token_ttl_days: int = 30
+
     cors_origins: str = ""
 
     @property

@@ -10,7 +10,9 @@ from alembic import context
 from sqlalchemy import create_engine, pool
 
 from app.core.config import get_settings
-from app.models.base import Base
+
+# Imports every model module so their tables are registered on Base.metadata.
+from app.models import Base
 
 config = context.config
 
