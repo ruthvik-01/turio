@@ -9,8 +9,8 @@
 
 ## Current phase
 
-**Phase 2 — Resume & Profile** — `[~]` built and passing against SQLite; awaiting
-verification against the composed stack.
+**Phase 2 — Resume & Profile** — `[x] VERIFIED` against the real Docker Compose
+stack. Next: Phase 3 — Job Dataset & Ingestion.
 
 ## Documentation reconciliation completed
 
@@ -195,6 +195,114 @@ Status: VERIFIED
   it is a whole phase. Worth adding one.
 
 Awaiting user confirmation before opening Phase 2.
+
+## Phase 2 report — Resume & Profile
+
+Status: VERIFIED
+
+### Built
+
+- Migration `c3a82f12a934` adds `resumes`, `profiles`, `skills`, `experiences`,
+  `educations`, `projects`.
+- `POST /api/v1/resumes`, `GET /api/v1/profiles/me`, `PATCH /api/v1/profiles/me`.
+- Deterministic parsing (ADR-008): text extraction and normalisation, section
+  detection, then entity extraction. No model is involved anywhere in the
+  pipeline, so it cannot fabricate — where a rule cannot establish a field it
+  returns null, and ambiguous heuristics deliberately give up.
+- Resume binaries go to S3-compatible object storage and PostgreSQL stores only
+  the key (ADR-025). MinIO runs in compose as the local implementation.
+- `OBJECT_STORAGE_UNAVAILABLE` added to the error-code contract (ADR-025).
+
+### Exit checklist
+
+- `[x]` **Upload rejects unsupported file types/oversized files with a stable error code, not a crash**
+  - Non-PDF → `415 INVALID_RESUME`. Oversized → `413 INVALID_RESUME`. Empty, and
+    a file that starts `%PDF` but is not readable → `415 INVALID_RESUME`.
+    Unauthenticated → `401 UNAUTHENTICATED`. No path returns a 500.
+- `[x]` **Re-uploading the same file (same checksum) does not duplicate/reprocess unnecessarily**
+  - Second upload of identical bytes returns `200` with `reprocessed: false` and
+    the same resume id, where new bytes return `201`.
+  - Stronger evidence than the status code: after two uploads of the same bytes
+    the bucket holds exactly **one** object, at `resumes/<user>/<sha256>.pdf`.
+- `[x]` **No fabricated fields — an empty resume section produces null/empty, never an invented value**
+  - A resume with empty EXPERIENCE/EDUCATION/SKILLS sections yields `[]` for each
+    and `null` for the fields the rules cannot establish.
+  - `work_authorization_status` and `sponsorship_required` are never written by
+    extraction. A resume literally stating "Authorized to work in the United
+    States. Will require visa sponsorship." leaves both `null`; they change only
+    when the user supplies them through PATCH.
+- `[x]` **User can edit extracted fields and the edit is what gets used later, not the raw extraction**
+  - After `PATCH`, `GET /profiles/me` returns the edited values and the parsed
+    value is gone rather than merged alongside it. Editing only `skills` leaves
+    `experiences` untouched, and every accepted edit advances `profile.version`.
+
+### Compatibility check against Phase 1
+
+- `[x]` **`/resumes` and `/profiles/me` are rejected with `UNAUTHENTICATED` when called without a token**
+- `[x]` **Profile is scoped to `user_id` from the token, not a client-supplied id**
+  - Structurally rather than by a check: the routes are `/profiles/me`, and the
+    handler takes `user_id` only from `require_user`. No profile id appears in
+    any path, query or body, so there is no client-supplied id to abuse.
+  - Consequently a `FORBIDDEN` case is **not reachable in Phase 2**. It becomes
+    reachable in Phase 5, where `/applications/{application_id}` accepts an id
+    that must be checked against the token. Recorded so that `TESTING.md`
+    section 2's cross-user case is not mistaken for already covered.
+
+### Evidence
+
+- Clean clone, **no `.env`**: `docker compose up --build -d` exits `0`, and all
+  four services — `postgres`, `object-storage`, `backend`, `frontend` — reach
+  `(healthy)`.
+- `alembic current` → `c3a82f12a934`; nine tables present.
+- `\d resumes` / `\d profiles` on real PostgreSQL show `uuid`,
+  `timestamp with time zone`, `jsonb` for `preferred_roles`, and the declared
+  foreign-key actions (`ON DELETE CASCADE`, `ON DELETE SET NULL`).
+- Live flow over the composed stack:
+
+```text
+register                                     201
+POST /resumes (new pdf)                      201
+    reprocessed=True  parser=rules-v1
+    name='Jane Doe' location='San Francisco, CA' phone='+1 555 010 1234'
+    skills=['Python', 'FastAPI', 'PostgreSQL', 'Docker']
+    experience=[('Senior Engineer', 'Acme Corp', '2020-01-01', None)]
+    education=[('B.Tech', 'Computer Science', 'Example University', '2018-01-01')]
+    work_authorization=None sponsorship=None
+POST /resumes (identical bytes again)        200  reprocessed=False same_id=True
+POST /resumes (non-pdf)                      415  INVALID_RESUME
+POST /resumes (oversized)                    413  INVALID_RESUME
+POST /resumes (no token)                     401  UNAUTHENTICATED
+PATCH /profiles/me (user edit)               200
+GET /profiles/me                             200  version=3
+    name='Jane A. Doe' location='Oakland, CA'   <- user edit, not the parse
+    skills=['Python', 'Kubernetes']
+    experiences kept (not wiped by the skills edit): 1
+    work_authorization='citizen'                <- only ever user-supplied
+```
+
+- Object storage after two identical uploads: `bucket: turio-resumes`, exactly
+  one object, 981 bytes — the same size as the uploaded file.
+- Migrations on real PostgreSQL: 3 downgrades left only `alembic_version`;
+  3 upgrades restored all nine tables.
+- Full suite inside the container: `44 passed in 27.31s`.
+
+### Known issues carried forward
+
+- Everything still open from the Phase 0 and Phase 1 reports above.
+- Parsing is rules-only and deliberately conservative, so unusual layouts yield
+  `null` fields rather than guesses. Improving recall means extending the rules,
+  and any rule change must bump `PARSER_VERSION` — nothing enforces that, so a
+  forgotten bump silently serves stale parses for unchanged files.
+- PDF only. `README.md` section 5 lists PDF parsing, so `.docx` resumes are
+  rejected by contract rather than by oversight, but a real user is likely to
+  have one.
+- The automated suite runs on SQLite. The composed run above is the PostgreSQL
+  evidence, and it is manual.
+- `frontend inspo/` (brand logo and dashboard reference) is still untracked at
+  the repository root; it belongs in `frontend/public/brand/` and
+  `docs/reference/`.
+
+Awaiting user confirmation before opening Phase 3.
 
 ## Evidence rule
 
