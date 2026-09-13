@@ -8,6 +8,10 @@ psycopg[binary]==3.3.5
 alembic==1.20.0
 pydantic==2.13.5
 pydantic-settings==2.15.0
+# Required by pydantic's EmailStr, which app/schemas/auth.py uses. Imported
+# lazily by pydantic, so a missing entry here fails at app startup rather than
+# at install time.
+email-validator==2.3.0
 bcrypt==5.0.0
 pyjwt==2.14.0
 
