@@ -9,8 +9,8 @@
 
 ## Current phase
 
-**Phase 1 — Auth** — `[~]` built and tested; two checks are environment-limited because
-this machine has no container runtime, and Phase 0's item (d) is still open.
+**Phase 2 — Resume & Profile** — next to start. Phases 0 and 1 are `[x] VERIFIED`
+against the real Docker Compose stack.
 
 ## Documentation reconciliation completed
 
@@ -34,7 +34,7 @@ Evidence:
 
 ## Phase 0 report — Foundations
 
-Status: BLOCKED (partially verified)
+Status: VERIFIED
 
 ### Built
 
@@ -54,12 +54,12 @@ Status: BLOCKED (partially verified)
 
 ### Exit checklist
 
-- `[~]` **(a) `/health` returns 200 with a real DB ping, not a hardcoded response**
-  - Proven that the ping is real: an unreachable PostgreSQL DSN yields
-    `503 DATABASE_UNAVAILABLE`, both in `tests/test_health.py` and over live HTTP.
-    A hardcoded response cannot produce that.
-  - The 200 branch is proven over live HTTP, against SQLite.
-  - **Not yet proven:** a 200 against PostgreSQL itself. Needs Docker.
+- `[x]` **(a) `/health` returns 200 with a real DB ping, not a hardcoded response**
+  - Against real PostgreSQL in the composed stack: `200` with
+    `{"status":"ok","database":"ok","version":"0.1.0"}` and a matching `X-Request-ID`.
+  - `docker compose stop postgres` → `503 DATABASE_UNAVAILABLE`; `docker compose start
+    postgres` → `200` again. A hardcoded response cannot produce that transition.
+  - The same pair is asserted in `tests/test_health.py` against an unreachable DSN.
 - `[x]` **(b) Repo folder structure matches `SYSTEM_DESIGN.md` §6 (including `workers/`)**
   - `bash scripts/check_structure.sh` → `OK`, run against a fresh `git clone` so the
     `.gitkeep`-only directories (`data/`, `experiments/`, `docker/`, `scripts/`,
@@ -68,10 +68,11 @@ Status: BLOCKED (partially verified)
   - `git ls-files` matches no `.env`; `git check-ignore -v .env` reports the rule;
     no `sk-*` / `AIzaSy*` / `AKIA*` / private-key material in any tracked file; no
     non-placeholder credential assignment outside `.env.example`.
-- `[!]` **(d) `docker compose up` succeeds from a clean clone**
-  - Blocked: Docker is not installed on the development machine — no `docker`
-    binary, no Docker Desktop, no podman, and WSL is not installed. The compose file
-    and both Dockerfiles are written but have never been executed.
+- `[x]` **(d) `docker compose up` succeeds from a clean clone**
+  - Fresh `git clone` with **no `.env`**: `docker compose up --build -d` exits `0`,
+    and postgres, backend and frontend each reach `(healthy)`.
+  - Served frontend returns `200`, and `NEXT_PUBLIC_API_BASE_URL` is present in the
+    built bundle, confirming the build-arg path works.
 
 ### Evidence
 
@@ -84,12 +85,12 @@ Status: BLOCKED (partially verified)
   `request_id` inside the envelope.
 - Frontend: `tsc --noEmit` clean; `next build` succeeded (3 static routes).
 - `alembic upgrade head` applied `7dba7cb54f12` and recorded it in `alembic_version`.
+- **Composed stack from a clean clone with no `.env`:** `docker compose up --build -d`
+  exits `0`; `postgres`, `backend` and `frontend` each reach `(healthy)`; `GET /` → `200`.
 - Commits `969a378` and `751b960` on `phase-0-foundation`.
 
 ### Known issues carried forward
 
-- Exit item (d), and the PostgreSQL half of (a), cannot be verified until a container
-  runtime is installed.
 - `backend/requirements.txt` holds runtime and test dependencies together, so the
   Phase 0 image ships pytest. Split into runtime and dev files before a production
   image exists.
@@ -105,7 +106,7 @@ Status: BLOCKED (partially verified)
 
 ## Phase 1 report — Auth
 
-Status: VERIFIED for code; two checks are environment-limited.
+Status: VERIFIED
 
 ### Built
 
@@ -138,12 +139,15 @@ Status: VERIFIED for code; two checks are environment-limited.
 ### Compatibility check against Phase 0
 
 - `[x]` **`/health` still returns 200 unauthenticated**
-- `[~]` **Auth migrations run cleanly on top of Phase 0's schema with no manual fixups**
+- `[x]` **Auth migrations run cleanly on top of Phase 0's schema with no manual fixups**
   - Verified on SQLite: `upgrade head` from empty, `downgrade base`, then `upgrade
     head` again, all clean, with `alembic_version` tracking correctly at each step.
-  - **Not verified against PostgreSQL.** The migration uses `sa.Uuid()` and
-    `sa.DateTime(timezone=True)`, which should render as `uuid` and `timestamptz`;
-    that rendering is unproven here. Needs Docker.
+  - Verified again on **real PostgreSQL**: `alembic current` → `a463a4a0b4ca`;
+    `downgrade base` left only `alembic_version`; `upgrade head` restored
+    `alembic_version`, `refresh_tokens`, `users`.
+  - DDL renders as intended, not as SQLite approximations: `id`/`user_id`/`family_id`
+    are `uuid`, the four timestamps are `timestamp with time zone`, and both foreign
+    keys carry the declared actions.
 
 ### Evidence
 
@@ -155,14 +159,29 @@ Status: VERIFIED for code; two checks are environment-limited.
   `refresh replay old token 401` · `refresh family now dead 401` ·
   `login fresh 200` · `logout 200` · `refresh after logout 401`.
 - `alembic upgrade head` → `downgrade base` → `upgrade head` all clean.
+- **Composed stack:** `python -m pytest -q` inside the `backend` container →
+  `23 passed in 10.34s`; the live auth flow driven over the composed stack returns
+  `register 201`, `login 200`, `me 200`, `me (no token) 401`, `refresh 200`,
+  `refresh (replay old token) 401`, `refresh (family dead) 401`.
+- **`ON DELETE CASCADE` on real PostgreSQL:** inserted a user plus one refresh token
+  (1 row), deleted the user, and the token row count went to 0 — the delete cascaded.
+  SQLite cannot demonstrate this, because it ships `PRAGMA foreign_keys` off.
 - ADR-024 records the auth primitives; `API_SPEC.md` §2 now documents the auth
   request bodies, success body and failure codes.
 
 ### Known issues carried forward
 
 - Everything still open from the Phase 0 report above.
-- The suite runs on SQLite. `PRAGMA foreign_keys` is off by default there, so the
-  `ondelete="CASCADE"` on `refresh_tokens.user_id` is never exercised.
+- The suite runs on SQLite, where `PRAGMA foreign_keys` is off by default, so the
+  `ondelete="CASCADE"` on `refresh_tokens.user_id` is not exercised by any automated
+  test. It is verified manually against PostgreSQL (see the compatibility check).
+  A PostgreSQL-backed integration test would cover it automatically.
+- `backend/requirements.txt` was incomplete and the gap was invisible locally:
+  `email-validator` had been installed into the developer virtualenv directly and
+  never recorded, so all 23 tests passed while the container died on import. Caught
+  by the clean-clone compose run and fixed in `d2c06d8`. The structural fix is a CI
+  job that installs only from `requirements.txt` — the `TASKS.md` Sprint 0
+  "CI/basic tests" item, still open.
 - `BACKEND.md` §11 lists `INVALID_CREDENTIALS`; `API_SPEC.md` §9 — the registry per
   `CLAUDE.md` §3 — does not. Wrong credentials return `UNAUTHENTICATED`. Recorded in
   `API_SPEC.md`; the two lists should be reconciled before another auth-adjacent code

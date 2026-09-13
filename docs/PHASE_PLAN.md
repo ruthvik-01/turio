@@ -29,7 +29,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 0 — Foundations
-**Status:** [~] — two exit items unverified; see the Phase 0 report in `PROGRESS.md`
+**Status:** [x] VERIFIED
 
 **Objective:** A running skeleton that later phases can attach to. No business logic yet.
 
@@ -55,8 +55,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 1 — Auth
-**Status:** [~] — built and tested; two checks environment-limited, see the Phase 1
-report in `PROGRESS.md`
+**Status:** [x] VERIFIED
 
 **Objective:** Every route from Phase 2 onward can trust `user_id` in the request context.
 
