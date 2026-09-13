@@ -3,10 +3,11 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends, Header
+from fastapi import Depends, Header, Request
 
 from app.core.errors import AppError
 from app.core.security import decode_access_token
+from app.core.storage import ObjectStorage
 
 _BEARER_PREFIX = "bearer "
 
@@ -29,3 +30,10 @@ async def require_user(authorization: Annotated[str | None, Header()] = None) ->
 
 
 CurrentUserId = Annotated[UUID, Depends(require_user)]
+
+
+def get_storage(request: Request) -> ObjectStorage:
+    return request.app.state.storage
+
+
+StorageDep = Annotated[ObjectStorage, Depends(get_storage)]

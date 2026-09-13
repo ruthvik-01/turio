@@ -17,6 +17,18 @@ class Settings(BaseSettings):
     access_token_ttl_minutes: int = 15
     refresh_token_ttl_days: int = 30
 
+    # Resume binaries live in S3-compatible object storage; PostgreSQL stores
+    # only metadata and the key (DATABASE.md section 1).
+    object_storage_endpoint: str
+    object_storage_bucket: str
+    object_storage_access_key: str
+    object_storage_secret_key: str
+    # MinIO and most S3-compatible servers ignore the region but the client
+    # requires one to sign requests.
+    object_storage_region: str = "us-east-1"
+
+    max_resume_bytes: int = 5 * 1024 * 1024
+
     cors_origins: str = ""
 
     @property

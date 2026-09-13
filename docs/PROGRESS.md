@@ -9,8 +9,8 @@
 
 ## Current phase
 
-**Phase 2 — Resume & Profile** — next to start. Phases 0 and 1 are `[x] VERIFIED`
-against the real Docker Compose stack.
+**Phase 2 — Resume & Profile** — `[~]` built and passing against SQLite; awaiting
+verification against the composed stack.
 
 ## Documentation reconciliation completed
 

@@ -2,8 +2,13 @@
 
 from datetime import datetime, timezone
 
-from sqlalchemy import DateTime
+from sqlalchemy import JSON, DateTime
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.types import TypeDecorator
+
+# JSONB is the deployment target. SQLite has no JSONB, so it gets plain JSON -
+# otherwise the suite could not run without a container runtime.
+JsonB = JSONB().with_variant(JSON(), "sqlite")
 
 
 class UTCDateTime(TypeDecorator):

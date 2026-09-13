@@ -13,15 +13,29 @@ from app.core.db import create_engine, create_session_factory
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIdMiddleware
+from app.core.storage import ObjectStorage
 
 logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    engine = create_engine(get_settings().database_url)
+    settings = get_settings()
+
+    engine = create_engine(settings.database_url)
     app.state.engine = engine
     app.state.session_factory = create_session_factory(engine)
+
+    # Constructing the client does not connect, so object storage being down
+    # cannot stop the API from booting.
+    app.state.storage = ObjectStorage(
+        endpoint=settings.object_storage_endpoint,
+        access_key=settings.object_storage_access_key,
+        secret_key=settings.object_storage_secret_key,
+        region=settings.object_storage_region,
+        bucket=settings.object_storage_bucket,
+    )
+
     logger.info("application_started")
     try:
         yield

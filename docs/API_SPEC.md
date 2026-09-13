@@ -98,13 +98,45 @@ Returned by `register` (`201`), `login` (`200`) and `refresh` (`200`):
 ## 3. Resume/profile
 
 ### POST `/api/v1/resumes`
-Upload a resume.
+Upload a resume. `multipart/form-data` with a single `file` field. PDF only.
+
+Answers `201` when a new resume was recorded, and `200` when the same bytes
+had already been parsed with the same `parser_version` — in that case nothing
+is stored or extracted again, and `data.reprocessed` is `false`
+(`DATA_PIPELINE.md` section 5). `data.profile` is the profile as it stands
+after extraction.
+
+Failures:
+
+- `415 INVALID_RESUME` — not a PDF, encrypted, empty, or unreadable as a PDF.
+- `413 INVALID_RESUME` — larger than the configured limit (5 MB by default).
+- `503 OBJECT_STORAGE_UNAVAILABLE` — the file could not be stored.
+
+Extraction fills `full_name`, `phone`, `location`, the three profile URLs, and
+the skills/experiences/educations/projects sets. It never fills
+`work_authorization_status` or `sponsorship_required`: those are collected
+explicitly, because deriving them from a document would be fabricating a legal
+declaration (`CLAUDE.md` section 9).
+
+A field the parser cannot establish is `null`. An empty section yields an empty
+list. Nothing is inferred to fill a gap.
 
 ### GET `/api/v1/profiles/me`
-Get current verified profile.
+Current profile, including extracted skills, experiences, educations and
+projects. Creates an empty profile on first call rather than 404ing.
 
 ### PATCH `/api/v1/profiles/me`
-Update user-confirmed profile data and increment `profile.version` when relevant.
+Apply user-confirmed corrections. Partial: only fields present in the body are
+applied, so an explicit `null` clears a field while omitting it leaves the
+stored value alone.
+
+Replacing an entity set (`skills`, `experiences`, `educations`, `projects`)
+replaces it wholesale — the submitted list becomes the complete set. Sets not
+mentioned in the request are left untouched.
+
+Every accepted edit increments `profile.version` (`ADR-019`). These values are
+what later phases read; extraction only ever seeds them (`DATA_PIPELINE.md`
+section 1).
 
 ## 4. Jobs
 
@@ -202,6 +234,7 @@ FORBIDDEN
 CONFLICT
 IDEMPOTENCY_CONFLICT
 DATABASE_UNAVAILABLE
+OBJECT_STORAGE_UNAVAILABLE
 INTERNAL_ERROR
 ```
 

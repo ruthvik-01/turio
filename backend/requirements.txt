@@ -14,6 +14,10 @@ pydantic-settings==2.15.0
 email-validator==2.3.0
 bcrypt==5.0.0
 pyjwt==2.14.0
+pypdf==6.18.1
+boto3==1.43.93
+# Required by FastAPI for multipart/form-data, which POST /resumes uses.
+python-multipart==0.0.32
 
 # --- test only ---
 # Kept in one file so the Phase 0 container can run its own verification

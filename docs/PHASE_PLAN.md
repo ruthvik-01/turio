@@ -82,7 +82,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 2 — Resume & Profile
-**Status:** [ ]
+**Status:** [~] — built; verification against the composed stack in progress
 
 **Objective:** A logged-in user can upload a resume and get a stored, reviewable candidate profile.
 

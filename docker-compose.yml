@@ -1,6 +1,6 @@
-# Phase 0 brings up postgres + backend + frontend only (PHASE_PLAN.md).
-# DEPLOYMENT.md section 1 lists five services as the end state: `object-storage`
-# is first needed in Phase 2 (resume files) and `worker` in Phase 3 (ingestion).
+# Phase 2 brings up postgres + object-storage + backend + frontend.
+# DEPLOYMENT.md section 1 lists five services as the end state; `worker` is
+# first needed in Phase 3 (ingestion) and is still absent.
 #
 # No `version:` key - it is obsolete in Compose v2.
 #
@@ -40,10 +40,18 @@ services:
       # Development default only. Any shared or deployed environment must set
       # SECRET_KEY explicitly - tokens signed with this value are forgeable.
       SECRET_KEY: ${SECRET_KEY:-insecure_dev_only_replace_before_deploying}
+      # Host is the compose service name. Any S3-compatible endpoint works
+      # unchanged, which is why the client speaks the S3 API (ADR-025).
+      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:-http://object-storage:9000}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-turio-resumes}
+      OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:-turio_minio}
+      OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY:-replace_me_minio}
     ports:
       - "8000:8000"
     depends_on:
       postgres:
+        condition: service_healthy
+      object-storage:
         condition: service_healthy
     command: >
       sh -c "alembic upgrade head &&
@@ -64,6 +72,26 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+
+  object-storage:
+    # MinIO is no longer published on Docker Hub; quay.io is its registry.
+    image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${OBJECT_STORAGE_ACCESS_KEY:-turio_minio}
+      MINIO_ROOT_PASSWORD: ${OBJECT_STORAGE_SECRET_KEY:-replace_me_minio}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - turio_objectdata:/data
+    healthcheck:
+      # The image ships curl but not wget.
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   frontend:
     build:
@@ -89,3 +117,4 @@ services:
 
 volumes:
   turio_pgdata:
+  turio_objectdata:

@@ -144,6 +144,15 @@ Status values:
 **Impact:** Three new runtime dependencies (`bcrypt`, `pyjwt`, `email-validator`). `SECRET_KEY` is required in every environment including tests. bcrypt ignores input past 72 bytes, so that limit is enforced at the request boundary rather than silently truncating.
 **Evidence:** `backend/app/core/security.py`, `backend/app/schemas/auth.py`; `backend/tests/test_auth.py`.
 
+## ADR-025 — Object storage through the S3 API, and an object-storage error code
+**Status:** Accepted
+**Decision:** Store resume binaries through the S3 API (boto3) in a private bucket, with MinIO running in compose as the local implementation. Add `OBJECT_STORAGE_UNAVAILABLE` to the canonical error-code list in `API_SPEC.md` section 9.
+**Context:** `DATABASE.md` section 1 keeps binaries out of PostgreSQL and `README.md` section 5 names S3-compatible storage, but no document names an implementation, and section 9 has no code for a storage outage.
+**Alternatives:** Writing to the local filesystem and migrating later; keeping the bytes in PostgreSQL; reusing `DATABASE_UNAVAILABLE` for a storage failure.
+**Reasoning:** One S3 client serves local development and any real S3 endpoint, so only the endpoint and credentials differ between environments rather than the code path. A filesystem implementation would have to be replaced later, and `PHASE_PLAN.md` section 1.3 treats changing a verified phase's code as something to record first. A storage outage is a different failure from a database outage, and a client cannot act correctly on the wrong code.
+**Impact:** `POST /api/v1/resumes` returns `503 OBJECT_STORAGE_UNAVAILABLE` when storage is unreachable. The bucket is created on first use rather than at startup, so object storage being down cannot stop the API from booting. New runtime dependency: boto3.
+**Evidence:** `backend/app/core/storage.py`; `backend/tests/test_resumes.py` asserts the 503 body.
+
 ## ADR template
 
 ### ADR-XXX — Title
