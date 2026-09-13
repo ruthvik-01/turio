@@ -55,6 +55,46 @@ Return service health and verify the database connection. Unauthenticated.
 
 `503` — the database ping failed; `error.code` is `DATABASE_UNAVAILABLE`.
 
+### Auth request bodies
+
+| Route | Body |
+|---|---|
+| `POST /api/v1/auth/register` | `{ "email": string, "password": string }` — password at least 8 characters and at most 72 bytes |
+| `POST /api/v1/auth/login` | `{ "email": string, "password": string }` |
+| `POST /api/v1/auth/refresh` | `{ "refresh_token": string }` |
+| `POST /api/v1/auth/logout` | `{ "refresh_token": string }` |
+| `POST /api/v1/auth/logout-all` | none |
+| `GET /api/v1/auth/me` | none |
+
+### Auth success body
+
+Returned by `register` (`201`), `login` (`200`) and `refresh` (`200`):
+
+```json
+{
+  "data": {
+    "user": { "id": "uuid", "email": "user@example.com", "created_at": "ISO-8601" },
+    "token": {
+      "access_token": "jwt",
+      "refresh_token": "opaque",
+      "token_type": "bearer",
+      "expires_in": 900
+    }
+  },
+  "error": null,
+  "request_id": ""
+}
+```
+
+`logout`, `logout-all` and `me` return `200`. `logout` and `logout-all` return `data: null`.
+
+### Auth failure codes
+
+- `409 CONFLICT` — the email is already registered. Email comparison is case-insensitive and whitespace-trimmed, so `A@example.com` and `a@example.com` are the same account.
+- `401 UNAUTHENTICATED` — wrong credentials, an unknown email, an invalid/expired/reused refresh token, or a missing/invalid access token on a protected route. Wrong credentials and an unknown email produce byte-identical responses so the endpoint cannot be used to enumerate accounts.
+
+`BACKEND.md` section 11 lists `INVALID_CREDENTIALS` as an example code, but it is not in the section 9 registry. Wrong credentials therefore return `UNAUTHENTICATED`; `BACKEND.md` section 11 has not been changed, and the two lists should be reconciled before another phase adds an auth-adjacent code.
+
 ## 3. Resume/profile
 
 ### POST `/api/v1/resumes`

@@ -135,6 +135,15 @@ Status values:
 **Impact:** `GET /api/v1/health` returns `503` with `DATABASE_UNAVAILABLE` when the ping fails; any unhandled exception returns `500` with `INTERNAL_ERROR`. Both use the standard envelope.
 **Evidence:** `backend/app/core/errors.py`, `backend/app/services/health.py`; `backend/tests/test_health.py` asserts the 503 body.
 
+## ADR-024 — Auth primitives: bcrypt passwords, SHA-256 refresh tokens, HS256 JWTs
+**Status:** Accepted
+**Decision:** Hash passwords with bcrypt. Store refresh tokens as SHA-256 digests. Sign access tokens as HS256 JWTs with a `secret_key` taken from the environment. Validate email addresses with `email-validator` at the request boundary.
+**Context:** Phase 1 implements `AUTH.md`, which permits bcrypt or argon2id for passwords and requires refresh tokens to be stored only as hashes. No document names a JWT library or the hash used for refresh tokens.
+**Alternatives:** argon2id for passwords; `python-jose` for JWTs; a slow key-derivation function for refresh tokens.
+**Reasoning:** bcrypt and HS256 come from two small, actively maintained dependencies. Refresh tokens are 256-bit random values, so a slow KDF would add latency to every refresh without adding any guessing resistance — SHA-256 is the right primitive for a high-entropy secret, and bcrypt is the right one for a password. `secret_key` has no default so a misconfigured service fails to boot instead of signing tokens with a predictable key.
+**Impact:** Three new runtime dependencies (`bcrypt`, `pyjwt`, `email-validator`). `SECRET_KEY` is required in every environment including tests. bcrypt ignores input past 72 bytes, so that limit is enforced at the request boundary rather than silently truncating.
+**Evidence:** `backend/app/core/security.py`, `backend/app/schemas/auth.py`; `backend/tests/test_auth.py`.
+
 ## ADR template
 
 ### ADR-XXX — Title

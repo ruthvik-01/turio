@@ -9,8 +9,8 @@
 
 ## Current phase
 
-**Phase 0 — Foundations** — `[~]` in progress, two exit items unverified. Both need a
-container runtime, which this machine does not have. See the Phase 0 report below.
+**Phase 1 — Auth** — `[~]` built and tested; two checks are environment-limited because
+this machine has no container runtime, and Phase 0's item (d) is still open.
 
 ## Documentation reconciliation completed
 
@@ -103,7 +103,79 @@ Status: BLOCKED (partially verified)
 - `docker-compose.yml` defaults `POSTGRES_PASSWORD` and `DATABASE_URL` independently,
   so overriding one without the other desynchronises them. Noted in the file itself.
 
-Awaiting user confirmation before opening Phase 1.
+## Phase 1 report — Auth
+
+Status: VERIFIED for code; two checks are environment-limited.
+
+### Built
+
+- `users` and `refresh_tokens` migrations, revision `a463a4a0b4ca`.
+- `/api/v1/auth/register`, `/login`, `/refresh`, `/logout`, `/logout-all`, plus
+  `/auth/me` as the protected stub route `PHASE_PLAN.md` asks for.
+- `require_user` dependency in `app/api/deps.py`. Every route except `health` and the
+  public auth routes hangs off a router that carries it, so a future route group is
+  authenticated by default instead of by remembering.
+- bcrypt password hashing, SHA-256 refresh-token storage, HS256 access tokens, and a
+  constant-time login path (ADR-024).
+
+### Exit checklist
+
+- `[x]` **Passwords are bcrypt-hashed, never logged, never returned in any response**
+  - Hashes start `$2b$`; the plaintext appears in no response body and in no captured
+    log record, message or structured field.
+- `[x]` **Refresh tokens stored only as hashes; raw token never persisted**
+  - The stored value equals `sha256(raw)` and never the raw token.
+- `[x]` **Refresh token reuse is detected and revokes the token family**
+  - Replaying a rotated token kills the family: the token that rotation legitimately
+    issued stops working too, and every row in the family is revoked.
+- `[x]` **No/expired/invalid token on a protected route returns `UNAUTHENTICATED`, not a 500**
+  - Covered for absent, empty, malformed, non-Bearer and expired credentials.
+- `[x]` **All 5 test cases in `TESTING.md` §2 (Auth section) pass**
+  - Duplicate registration, invalid login without enumeration, expired access token,
+    refresh reuse revoking the family, cross-user access. The cross-user case is
+    tested against `logout`, which is the only user-scoped resource Phase 1 has.
+
+### Compatibility check against Phase 0
+
+- `[x]` **`/health` still returns 200 unauthenticated**
+- `[~]` **Auth migrations run cleanly on top of Phase 0's schema with no manual fixups**
+  - Verified on SQLite: `upgrade head` from empty, `downgrade base`, then `upgrade
+    head` again, all clean, with `alembic_version` tracking correctly at each step.
+  - **Not verified against PostgreSQL.** The migration uses `sa.Uuid()` and
+    `sa.DateTime(timezone=True)`, which should render as `uuid` and `timestamptz`;
+    that rendering is unproven here. Needs Docker.
+
+### Evidence
+
+- `backend/tests/`: `23 passed in 9.48s` (3 Phase 0, 19 Phase 1, 1 log hygiene).
+- Live HTTP against a running uvicorn, every step as specified:
+  `health 200` · `register 201` · `register duplicate (case-folded) 409 CONFLICT` ·
+  `login wrong password 401` · `login unknown email 401` · `me no token 401` ·
+  `me garbage token 401` · `me valid token 200` · `refresh 200` ·
+  `refresh replay old token 401` · `refresh family now dead 401` ·
+  `login fresh 200` · `logout 200` · `refresh after logout 401`.
+- `alembic upgrade head` → `downgrade base` → `upgrade head` all clean.
+- ADR-024 records the auth primitives; `API_SPEC.md` §2 now documents the auth
+  request bodies, success body and failure codes.
+
+### Known issues carried forward
+
+- Everything still open from the Phase 0 report above.
+- The suite runs on SQLite. `PRAGMA foreign_keys` is off by default there, so the
+  `ondelete="CASCADE"` on `refresh_tokens.user_id` is never exercised.
+- `BACKEND.md` §11 lists `INVALID_CREDENTIALS`; `API_SPEC.md` §9 — the registry per
+  `CLAUDE.md` §3 — does not. Wrong credentials return `UNAUTHENTICATED`. Recorded in
+  `API_SPEC.md`; the two lists should be reconciled before another auth-adjacent code
+  is added.
+- No rate limiting on `/auth/login` or `/auth/register`. Nothing in the docs requires
+  it at Phase 1, but it is the obvious next hardening step and belongs in the Phase 8
+  security pass.
+- `docker-compose.yml` carries a development-only `SECRET_KEY` default so a clean
+  clone boots. Any shared or deployed environment must override it. Same Phase 8 pass.
+- `PROJECT_SPEC.md` has no functional requirement covering authentication, although
+  it is a whole phase. Worth adding one.
+
+Awaiting user confirmation before opening Phase 2.
 
 ## Evidence rule
 

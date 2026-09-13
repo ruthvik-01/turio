@@ -55,7 +55,8 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 1 — Auth
-**Status:** [ ]
+**Status:** [~] — built and tested; two checks environment-limited, see the Phase 1
+report in `PROGRESS.md`
 
 **Objective:** Every route from Phase 2 onward can trust `user_id` in the request context.
 
