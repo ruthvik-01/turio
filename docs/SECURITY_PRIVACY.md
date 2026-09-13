@@ -78,3 +78,8 @@ SUBMITTED
 SUBMISSION_VERIFIED
 FAILED
 ```
+
+
+## Retention
+
+Concrete retention periods remain a production-readiness decision. Define and record them before production deployment; do not claim a retention period that has not been approved.

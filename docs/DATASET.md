@@ -64,7 +64,7 @@ Normalize incoming records to:
   "ats": "",
   "required_skills": [],
   "education_requirements": [],
-  "experience_requirements": []
+  "experience_requirement": {}
 }
 ```
 
@@ -165,3 +165,8 @@ Every experiment must record:
 - embedding model,
 - ranking configuration,
 - evaluation script version.
+
+
+## 11. Refresh policy
+
+The production refresh cadence is not frozen yet. The implementation must support a controlled refresh job and record `fetched_at`/content hashes. A concrete cadence and staleness threshold are a Phase 3 operational decision and must be recorded before scheduling automated refreshes.

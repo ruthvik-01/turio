@@ -47,7 +47,7 @@ Responsible for presentation, interaction, state display, and user confirmation.
 Responsible for account creation, credential verification, password hashing, and access/refresh token issuance and rotation. See `AUTH.md`.
 
 ### FastAPI
-Responsible for authenticated API requests, orchestration, validation, and service boundaries. Every route except `/auth/*` and `/health` requires a valid access token issued by the Auth service.
+Responsible for authenticated API requests, orchestration, validation, and service boundaries. Every route except `/api/v1/auth/*` and `/api/v1/health` requires a valid access token issued by the Auth service.
 
 ### Resume service
 Responsible for file parsing and candidate-information extraction.
@@ -131,6 +131,8 @@ Do not place site-specific selectors into the generic application logic.
 
 ## 6. Recommended repository layout
 
+The following tree is the minimum expected baseline, not an exhaustive future file list.
+
 ```text
 turio/
 ├── frontend/
@@ -152,6 +154,11 @@ turio/
 ├── docs/
 ├── scripts/
 ├── docker/
+├── alembic/
+│   └── versions/
+├── docker/
 ├── .env.example
+├── .gitignore
+├── docker-compose.yml
 └── README.md
 ```

@@ -61,8 +61,8 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 
 **Scope:**
 - `users` + `refresh_tokens` migrations
-- `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/logout-all`
-- JWT middleware enforced on all non-`/auth`, non-`/health` routes
+- `/api/v1/auth/register`, `/api/v1/auth/login`, `/api/v1/auth/refresh`, `/api/v1/auth/logout`, `/api/v1/auth/logout-all`
+- JWT middleware enforced on all non-`/api/v1/auth`, non-`/api/v1/health` routes
 
 **Docs to read:** `AUTH.md`, `DATABASE.md` §users/refresh_tokens, `API_SPEC.md` §2
 

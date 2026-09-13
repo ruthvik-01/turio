@@ -1,5 +1,8 @@
 # Turio — Task Board
 
+Implementation must follow `PHASE_PLAN.md` gates and `PROGRESS.md` next-task pointer. Do not skip phases.
+
+
 ## Sprint 0 — Freeze foundations
 
 - [ ] Repository created

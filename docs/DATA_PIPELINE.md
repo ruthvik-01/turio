@@ -73,3 +73,8 @@ Reprocess only when:
 - model version changes,
 - job content hash changes,
 - user explicitly edits verified profile data.
+
+
+## Cache contract
+
+Cache keys that depend on candidate state must include `profile.version`. Job-dependent caches must include the job content hash or equivalent stable version. The concrete cache technology is implementation-defined and should be introduced only when required by the active phase.

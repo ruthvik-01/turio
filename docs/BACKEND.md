@@ -64,9 +64,10 @@ backend/app/
 /api/v1/jobs
 /api/v1/matches
 /api/v1/applications
-/api/v1/tracking
 /api/v1/health
 ```
+
+Tracking is exposed through `/api/v1/applications` and application resource routes; no separate `/tracking` prefix is used in the MVP.
 
 ## 5. Resume service
 

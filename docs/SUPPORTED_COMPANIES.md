@@ -60,3 +60,15 @@ Add a new ATS only after:
 - evaluation evidence exists.
 
 Then evaluate one new ATS at a time.
+
+
+## End-to-end evidence
+
+A company becomes **supported** only after recording at minimum:
+- tested job URL,
+- application URL/workflow,
+- form-schema version,
+- test date,
+- success/failure result,
+- artifact or screenshot reference,
+- known unsupported fields/edge cases.

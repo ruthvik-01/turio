@@ -141,3 +141,8 @@ Never report a single accuracy number without:
 - method,
 - comparison baseline,
 - metric definition.
+
+
+## Benchmark annotation storage
+
+Evaluation judgments are stored in the `evaluation_annotations` table defined in `DATABASE.md`, separate from production application state.

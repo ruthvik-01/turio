@@ -38,7 +38,7 @@ Register with an already-used email → rejected with a stable error code, not a
 Wrong password → generic "invalid credentials" response; never reveal whether the email exists.
 
 ### Auth: expired access token
-Expired access token on a protected route → `UNAUTHENTICATED`; client must call `/auth/refresh`.
+Expired access token on a protected route → `UNAUTHENTICATED`; client must call `/api/v1/auth/refresh`.
 
 ### Auth: refresh token reuse
 A refresh token that has already been rotated is presented again → treat as possible theft, revoke the whole token family, force re-login.

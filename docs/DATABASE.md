@@ -4,7 +4,7 @@
 
 Use **PostgreSQL** for the application database.
 
-Keep binary resume files in object storage; store file metadata/reference in PostgreSQL.
+Keep binary resume files in private object storage; PostgreSQL stores metadata and references.
 
 ## 2. Core entities
 
@@ -17,14 +17,15 @@ skills
 experiences
 educations
 projects
-jobs
 job_sources
+jobs
 job_matches
 applications
 application_fields
 application_answers
 application_events
 agent_runs
+evaluation_annotations
 ```
 
 ## 3. Entity relationships
@@ -34,51 +35,57 @@ users
  ├── refresh_tokens
  ├── profiles
  ├── resumes
+ ├── skills
  ├── experiences
  ├── educations
  ├── projects
  ├── applications
  └── agent_runs
 
-jobs
- ├── job_sources
- └── job_matches
+job_sources
+ └── jobs
+      └── job_matches
 
 applications
  ├── jobs
  ├── application_fields
- ├── application_answers
- └── application_events
+ │     └── application_answers
+ ├── application_events
+ └── agent_runs
+
+evaluation_annotations
+ ├── resumes
+ └── jobs
 ```
 
-## 4. Suggested schema
+## 4. Schema
 
 ### users
 - id UUID PK
 - email UNIQUE
 - password_hash
 - email_verified boolean default false
-- auth_provider (`"password"` for MVP; reserved for `"google"`/`"github"` later)
+- auth_provider (`password` for MVP; future values may include OAuth providers)
 - last_login_at
 - created_at
 - updated_at
 
-See `AUTH.md` for the authentication design these fields support.
-
 ### refresh_tokens
 - id UUID PK
 - user_id FK
-- token_hash
+- family_id UUID NOT NULL
+- token_hash UNIQUE
 - issued_at
 - expires_at
 - revoked_at nullable
 - replaced_by_token_id nullable FK
 
-Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never store the raw token, only its hash. See `AUTH.md` §4–5.
+`family_id` makes token-family revocation expressible when refresh-token reuse is detected.
 
 ### profiles
 - id UUID PK
-- user_id FK
+- user_id FK UNIQUE
+- version integer NOT NULL default 1
 - full_name
 - phone
 - location
@@ -90,6 +97,8 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - sponsorship_required
 - created_at
 - updated_at
+
+`version` is incremented whenever profile data relevant to application mapping or cached matching changes.
 
 ### resumes
 - id UUID PK
@@ -108,7 +117,7 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - name
 - normalized_name
 - confidence
-- source_resume_id
+- source_resume_id FK
 
 ### experiences
 - id UUID PK
@@ -118,7 +127,7 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - start_date
 - end_date
 - description
-- source_resume_id
+- source_resume_id FK
 
 ### educations
 - id UUID PK
@@ -128,6 +137,7 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - field
 - start_date
 - end_date
+- source_resume_id FK
 
 ### projects
 - id UUID PK
@@ -135,7 +145,7 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - name
 - description
 - technologies
-- source_resume_id
+- source_resume_id FK
 
 ### job_sources
 - id UUID PK
@@ -161,22 +171,62 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - content_hash
 - fetched_at
 
+Unique constraint:
+
+```text
+(source_id, external_id)
+```
+
 ### job_matches
 - id UUID PK
 - user_id FK
 - job_id FK
 - model_name
 - model_version
+- ranking_config_version
 - semantic_score
 - skill_score
 - education_score
 - experience_score
 - location_score
+- preference_score
 - final_score
 - explanation_payload JSONB
 - created_at
 
 ### applications
+
+`status` describes the **automation/application pipeline state**.
+
+Allowed `status` values:
+
+```text
+created
+preparing
+needs_input
+ready_for_review
+approved_for_submission
+submitting
+submitted
+verification_failed
+automation_failed
+cancelled
+```
+
+`outcome` describes the **recruiter-side result** and may be null.
+
+Allowed `outcome` values:
+
+```text
+under_review
+interview
+offer
+rejected
+withdrawn
+accepted
+```
+
+Fields:
 - id UUID PK
 - user_id FK
 - job_id FK
@@ -185,8 +235,10 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - status
 - started_at
 - submitted_at
-- outcome
+- outcome nullable
 - notes
+- created_at
+- updated_at
 
 ### application_fields
 - id UUID PK
@@ -197,7 +249,10 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - required
 - source_locator
 - normalized_intent
+- options JSONB nullable
 - detected_at
+
+`field_key`, `normalized_intent`, and `source_locator` are the canonical internal names.
 
 ### application_answers
 - id UUID PK
@@ -208,12 +263,15 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - confidence
 - user_confirmed
 - created_at
+- updated_at
 
 ### application_events
 - id UUID PK
 - application_id FK
 - event_type
 - event_data JSONB
+- idempotency_key UNIQUE nullable
+- diagnostic_id nullable
 - created_at
 
 ### agent_runs
@@ -227,9 +285,22 @@ Refresh tokens are single-use and rotate on every `/auth/refresh` call. Never st
 - error_code
 - error_message
 
-## 5. Important database behavior
+### evaluation_annotations
+- id UUID PK
+- resume_id FK
+- job_id FK
+- relevance_label
+- skill_match_label
+- experience_match_label
+- education_match_label
+- location_match_label
+- annotator_id
+- annotation_version
+- created_at
 
-### Profile precedence
+The evaluation schema is intentionally separate from production application state.
+
+## 5. Profile precedence
 
 When mapping a form:
 
@@ -247,25 +318,22 @@ LLM-generated draft
 Never invent
 ```
 
-### Idempotency
+## 6. Idempotency
 
-Job ingestion and application tracking must tolerate repeated runs.
+- Job identity: `(source_id, external_id)`.
+- Job change detection: `content_hash`.
+- Application/event requests: client-supplied idempotency key where the API contract requires it.
+- Repeated requests must not create duplicate application records or duplicate state-transition events.
 
-Use:
-
-- source + external_id uniqueness for jobs,
-- content hash for change detection,
-- idempotency keys for application events.
-
-## 6. Sensitive fields
+## 7. Sensitive data
 
 Treat the following as restricted:
-
 - contact details,
 - resume files,
 - work authorization,
 - sponsorship information,
 - application answers,
-- password hashes and refresh token hashes.
+- password hashes,
+- refresh token hashes.
 
-Do not log raw sensitive values unnecessarily.
+Do not log raw sensitive values.
