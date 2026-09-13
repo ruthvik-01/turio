@@ -29,7 +29,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 0 — Foundations
-**Status:** [ ]
+**Status:** [~] — two exit items unverified; see the Phase 0 report in `PROGRESS.md`
 
 **Objective:** A running skeleton that later phases can attach to. No business logic yet.
 
