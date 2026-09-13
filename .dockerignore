@@ -1,0 +1,18 @@
+# Applies to the backend image, which builds from the repository root.
+.git/
+.github/
+docs/
+frontend/
+node_modules/
+**/node_modules/
+**/.next/
+**/.venv/
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+.env
+.env.*
+!.env.example
+*.zip

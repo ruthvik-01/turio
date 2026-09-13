@@ -1,0 +1,88 @@
+# Phase 0 brings up postgres + backend + frontend only (PHASE_PLAN.md).
+# DEPLOYMENT.md section 1 lists five services as the end state: `object-storage`
+# is first needed in Phase 2 (resume files) and `worker` in Phase 3 (ingestion).
+#
+# No `version:` key - it is obsolete in Compose v2.
+#
+# Every value is interpolated with a default so `docker compose up` succeeds
+# from a clean clone with no .env present (Phase 0 exit checklist item d).
+# If you override POSTGRES_PASSWORD, override DATABASE_URL to match.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-turio}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace_me}
+      POSTGRES_DB: ${POSTGRES_DB:-turio}
+    ports:
+      - "5432:5432"
+    volumes:
+      - turio_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-turio} -d ${POSTGRES_DB:-turio}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+
+  backend:
+    build:
+      # Repository root: the image needs alembic/ and alembic.ini, which
+      # SYSTEM_DESIGN.md section 6 places beside backend/ rather than inside it.
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://turio:replace_me@postgres:5432/turio}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      # python:3.13-slim ships no curl, so the probe uses the interpreter.
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          try:
+              sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health", timeout=3).status == 200 else 1)
+          except Exception:
+              sys.exit(1)
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8000/api/v1}
+    environment:
+      NODE_ENV: production
+      # Server-side calls use the compose network; the browser uses the
+      # public URL above.
+      INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:-http://backend:8000/api/v1}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  turio_pgdata:

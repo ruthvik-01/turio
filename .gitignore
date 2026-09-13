@@ -1,0 +1,36 @@
+# Environment files - never commit real values
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+dist/
+npm-debug.log*
+
+# Generated TypeScript artifacts (Next regenerates both)
+*.tsbuildinfo
+next-env.d.ts
+
+# Local data and generated artifacts
+data/*
+!data/.gitkeep
+experiments/*
+!experiments/.gitkeep
+*.zip
+
+# OS / editor
+.DS_Store
+Thumbs.db

@@ -156,7 +156,6 @@ turio/
 ├── docker/
 ├── alembic/
 │   └── versions/
-├── docker/
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml

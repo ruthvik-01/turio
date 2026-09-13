@@ -1,0 +1,7 @@
+@import "tailwindcss";
+
+/*
+ * Phase 0 is an unstyled shell. Design tokens - colour, radius, type scale -
+ * arrive in Phase 1 with the first real screens, per FRONTEND.md and
+ * CLAUDE.md section 5. Nothing here should be mistaken for the design system.
+ */

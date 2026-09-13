@@ -117,6 +117,24 @@ Status values:
 **Decision:** UI greens adjacent to the Turio mark must derive from the brand forest family rather than an unrelated competing green.
 **Reasoning:** Prevents visually inconsistent green values around the logo and primary product identity.
 
+## ADR-022 — Async SQLAlchemy 2.0 with psycopg3
+**Status:** Accepted
+**Decision:** Use SQLAlchemy 2.0's async engine and session API, backed by the `psycopg` (v3) driver, for all application database access.
+**Context:** Phase 0 needs a live database connection. ADR-002 already commits to FastAPI partly on the strength of its async support.
+**Alternatives:** Synchronous SQLAlchemy over a threadpool; `asyncpg` as the driver.
+**Reasoning:** One driver serves both the application's async engine and Alembic's synchronous migration path, so there is a single `DATABASE_URL` format and a single dependency to install. Introducing async later would mean rewriting the repository layer of an already-verified phase, which `PHASE_PLAN.md` section 1.3 prohibits.
+**Impact:** `DATABASE_URL` uses the `postgresql+psycopg://` scheme everywhere. Repositories accept an `AsyncSession`. `docker-compose.yml` and `.env.example` both pin that scheme.
+**Evidence:** `backend/app/core/db.py`, `alembic/env.py`; baseline revision applied and recorded in `alembic_version`.
+
+## ADR-023 — Database and internal error codes added to the canonical contract
+**Status:** Accepted
+**Decision:** Add `DATABASE_UNAVAILABLE` and `INTERNAL_ERROR` to the canonical error-code list in `API_SPEC.md` section 9.
+**Context:** `API_SPEC.md` section 9 forbids introducing an error code without an ADR and a contract update, while section 8 requires every response — including failures — to use the `{data, error, request_id}` envelope. Neither code existed, so a failed database ping and an unhandled exception had no compliant way to respond.
+**Alternatives:** Return `200` from `/health` with a field describing the database; let unhandled exceptions return FastAPI's default `{"detail": ...}` body.
+**Reasoning:** A health endpoint that answers `200` while its database is unreachable cannot be used by a container healthcheck or a load balancer. A non-enveloped `500` breaks the response contract every client is written against.
+**Impact:** `GET /api/v1/health` returns `503` with `DATABASE_UNAVAILABLE` when the ping fails; any unhandled exception returns `500` with `INTERNAL_ERROR`. Both use the standard envelope.
+**Evidence:** `backend/app/core/errors.py`, `backend/app/services/health.py`; `backend/tests/test_health.py` asserts the 503 body.
+
 ## ADR template
 
 ### ADR-XXX — Title

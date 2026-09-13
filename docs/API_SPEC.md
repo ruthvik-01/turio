@@ -41,7 +41,19 @@ Revoke the presented refresh token/session.
 Revoke all refresh-token families for the authenticated user.
 
 ### GET `/api/v1/health`
-Return service health and verify the database connection.
+Return service health and verify the database connection. Unauthenticated.
+
+`200` — the database ping succeeded:
+
+```json
+{
+  "data": { "status": "ok", "database": "ok", "version": "0.1.0" },
+  "error": null,
+  "request_id": ""
+}
+```
+
+`503` — the database ping failed; `error.code` is `DATABASE_UNAVAILABLE`.
 
 ## 3. Resume/profile
 
@@ -149,6 +161,8 @@ UNAUTHENTICATED
 FORBIDDEN
 CONFLICT
 IDEMPOTENCY_CONFLICT
+DATABASE_UNAVAILABLE
+INTERNAL_ERROR
 ```
 
 Do not introduce aliases such as `MISSING_PROFILE_FIELD` without an ADR and contract update.
