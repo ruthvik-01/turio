@@ -5,6 +5,7 @@ which is what Alembic compares against.
 """
 
 from app.models.base import Base
+from app.models.job import Job, JobSource
 from app.models.profile import Profile
 from app.models.profile_entities import Education, Experience, Project, Skill
 from app.models.refresh_token import RefreshToken
@@ -15,6 +16,8 @@ __all__ = [
     "Base",
     "Education",
     "Experience",
+    "Job",
+    "JobSource",
     "Profile",
     "Project",
     "RefreshToken",

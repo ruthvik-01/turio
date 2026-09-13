@@ -9,8 +9,8 @@
 
 ## Current phase
 
-**Phase 2 — Resume & Profile** — `[x] VERIFIED` against the real Docker Compose
-stack. Next: Phase 3 — Job Dataset & Ingestion.
+**Phase 3 — Job Dataset & Ingestion** — `[~]` built and passing against SQLite;
+awaiting verification against the composed stack.
 
 ## Documentation reconciliation completed
 

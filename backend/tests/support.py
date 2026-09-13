@@ -1,6 +1,11 @@
 """Helpers shared by the API test modules."""
 
+import csv
+from pathlib import Path
+
 from httpx import AsyncClient, Response
+
+from app.services.job_normalize import CSV_FIELDS
 
 PASSWORD = "correct-horse-battery"
 
@@ -45,3 +50,38 @@ async def upload_resume(
         headers=headers,
         files={"file": (filename, data, content_type)},
     )
+
+
+def job_row(**overrides: object) -> dict[str, object]:
+    """One dataset row with every column present and sane.
+
+    Built from `CSV_FIELDS` so a test never has to count 26 columns by hand,
+    and so a change to the source header cannot silently desync the tests.
+    """
+    row: dict[str, object] = {field: "" for field in CSV_FIELDS}
+    row.update(
+        {
+            "url": "https://jobs.ashbyhq.com/acme/11111111-1111-1111-1111-111111111111",
+            "title": "Senior Python Engineer",
+            "company": "Acme Corp",
+            "ats_type": "ashby",
+            "ats_id": "11111111-1111-1111-1111-111111111111",
+            "location": "London, UK",
+            "employment_type": "FULL_TIME",
+            "description": "We use Python, PostgreSQL and Docker. Kubernetes a plus.",
+            "posted_at": "2026-01-05T10:00:00Z",
+            "raw": "{}",
+        }
+    )
+    row.update(overrides)
+    return row
+
+
+def write_jobs_csv(path: Path, rows: list[dict[str, object]]) -> Path:
+    """Write a dataset CSV the ingester can read."""
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.DictWriter(handle, fieldnames=list(CSV_FIELDS))
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({field: row.get(field, "") for field in CSV_FIELDS})
+    return path

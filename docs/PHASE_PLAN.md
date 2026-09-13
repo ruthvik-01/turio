@@ -108,7 +108,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 3 — Job Dataset & Ingestion
-**Status:** [ ]
+**Status:** [~] — built; verification against the composed stack in progress
 
 **Objective:** A populated, deduplicated, queryable job database.
 

@@ -46,8 +46,14 @@ services:
       OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-turio-resumes}
       OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:-turio_minio}
       OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY:-replace_me_minio}
+      # Stapply slice, mounted read-only below. Absent is survivable: the file
+      # is only read by POST /jobs/refresh, which reports it as unavailable.
+      JOB_DATASET_PATH: ${JOB_DATASET_PATH:-data/ashby-jobs.csv}
     ports:
       - "8000:8000"
+    volumes:
+      # Read-only: ingestion reads the dataset, nothing writes to it.
+      - ./data:/app/data:ro
     depends_on:
       postgres:
         condition: service_healthy

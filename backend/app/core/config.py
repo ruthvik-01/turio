@@ -29,6 +29,12 @@ class Settings(BaseSettings):
 
     max_resume_bytes: int = 5 * 1024 * 1024
 
+    # Local copy of the Stapply job slice (DATASET.md section 1). Ingested by
+    # `POST /api/v1/jobs/refresh` and by scripts/import_jobs.py.
+    job_dataset_path: str = "data/ashby-jobs.csv"
+    # Rows per commit during ingestion. Bounds memory on a large slice.
+    job_ingest_batch_size: int = 1000
+
     cors_origins: str = ""
 
     @property

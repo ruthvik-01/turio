@@ -153,6 +153,24 @@ Status values:
 **Impact:** `POST /api/v1/resumes` returns `503 OBJECT_STORAGE_UNAVAILABLE` when storage is unreachable. The bucket is created on first use rather than at startup, so object storage being down cannot stop the API from booting. New runtime dependency: boto3.
 **Evidence:** `backend/app/core/storage.py`; `backend/tests/test_resumes.py` asserts the 503 body.
 
+## ADR-026 — `NOT_FOUND` added to the error-code contract
+**Status:** Accepted
+**Decision:** Add `NOT_FOUND` to the canonical error-code list in `API_SPEC.md` section 9, returned with HTTP `404`.
+**Context:** `GET /api/v1/jobs/{job_id}` takes an id that may not exist. Section 9 has no code for a missing resource, and section 8 requires every response to carry the envelope, so a bare Starlette `404` would break the contract.
+**Alternatives:** A job-specific `JOB_NOT_FOUND`; letting FastAPI's default 404 body through.
+**Reasoning:** Every resource route from Phase 5 onward — applications, matches, fields — needs the same case, so one generic code avoids a family of near-duplicates. The envelope's `error.code` identifies the kind of failure; the URL already identifies which resource.
+**Impact:** `GET /api/v1/jobs/{job_id}` returns `404` with `NOT_FOUND` and the standard envelope. Same applies to any future route that takes an id.
+**Evidence:** `backend/app/services/jobs.py`; `backend/tests/test_jobs.py` asserts the 404 body.
+
+## ADR-027 — One skill vocabulary for both sides of matching
+**Status:** Accepted
+**Decision:** Move the skill lexicon and alias map into `app/services/skills.py` and have both resume parsing and job parsing use it. Phase 2's `resume_parser.py` is updated to delegate to it.
+**Context:** Phase 2 gave `resume_parser.py` a small private alias map. Phase 3 extracts skills from job descriptions. Phase 4 compares the two sets.
+**Alternatives:** Two independent vocabularies; deferring the merge to Phase 4.
+**Reasoning:** This is a correctness issue rather than tidiness. Two maps that drift would normalise the same skill to different strings — a resume saying `mssql` becomes `mssql` on one side and `sql server` on the other — so Phase 4 would silently score a genuine match as a miss. Deferring just moves the bug to a phase where the cause is harder to see.
+**Impact:** Touches Phase 2's parser, which `PHASE_PLAN.md` section 1.3 requires be recorded first — this entry is that record. Phase 2's exit checklist is re-run afterwards. The shared lexicon also drops bare `c` and `r`, which match ordinary prose far too often to be useful.
+**Evidence:** `backend/app/services/skills.py`; `backend/tests/test_auth.py` and `test_resumes.py` re-run green.
+
 ## ADR template
 
 ### ADR-XXX — Title

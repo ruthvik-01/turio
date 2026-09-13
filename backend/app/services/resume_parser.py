@@ -13,6 +13,8 @@ import re
 from dataclasses import dataclass, field
 from datetime import date
 
+from app.services.skills import normalize_skill as _normalize_skill
+
 SECTION_ALIASES: dict[str, set[str]] = {
     "summary": {"summary", "profile", "objective", "about", "about me"},
     "experience": {
@@ -79,15 +81,6 @@ _PRESENT = re.compile(r"\b(present|current|now|ongoing)\b", re.IGNORECASE)
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _PHONE = re.compile(r"(?:\+?\d[\d\s().-]{7,}\d)")
 _URL = re.compile(r"https?://[^\s,;)]+|(?:www\.)[^\s,;)]+", re.IGNORECASE)
-
-# Deliberately small: it normalises the obviously-equivalent spellings and backs
-# the project-technology match. It is not an attempt at a skills taxonomy.
-_SKILL_ALIASES = {
-    "js": "javascript", "ts": "typescript", "py": "python", "node": "node.js",
-    "nodejs": "node.js", "reactjs": "react", "react.js": "react",
-    "postgres": "postgresql", "postgres db": "postgresql", "k8s": "kubernetes",
-    "golang": "go", "ml": "machine learning", "nlp": "natural language processing",
-}
 
 # Words that look like a name line but are not one.
 _NAME_STOPWORDS = frozenset({"resume", "curriculum vitae", "cv", "bio", "profile"})
@@ -214,11 +207,6 @@ def _blocks(lines: list[str]) -> list[list[str]]:
     if current:
         blocks.append(current)
     return blocks
-
-
-def _normalize_skill(name: str) -> str:
-    cleaned = name.strip().strip(".").lower()
-    return _SKILL_ALIASES.get(cleaned, cleaned)
 
 
 def _parse_skills(lines: list[str]) -> list[str]:

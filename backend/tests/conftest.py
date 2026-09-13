@@ -181,6 +181,18 @@ async def client(
 
 
 @pytest.fixture
+async def session(database_engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
+    """A session on the same database the `client` fixture talks to.
+
+    Lets a test seed rows for a route, or drive a service directly, and see the
+    same data either way.
+    """
+    factory = async_sessionmaker(database_engine, expire_on_commit=False)
+    async with factory() as db_session:
+        yield db_session
+
+
+@pytest.fixture
 def empty_parse() -> ParsedResume:
     """A parse that found nothing, for the no-fabrication assertions."""
     return ParsedResume()

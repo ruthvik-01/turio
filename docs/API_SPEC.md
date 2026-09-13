@@ -140,14 +140,55 @@ section 1).
 
 ## 4. Jobs
 
+The job inventory is shared, not user-owned: every authenticated user sees the
+same rows. Isolation applies to profiles and applications, not to job postings.
+
 ### GET `/api/v1/jobs`
-Search/filter jobs.
+Search and filter the inventory. All parameters optional.
+
+| Parameter | Meaning |
+|---|---|
+| `q` | Substring match against job title or company |
+| `company` | Exact company name, case-insensitive |
+| `location` | Substring match against location |
+| `ats` | Source platform, e.g. `ashby` |
+| `limit` | 1–100, default 20 |
+| `offset` | default 0 |
+
+`data` is `{jobs: [...], total, limit, offset}`, where `total` is the count of
+all matching rows rather than the page size.
 
 ### GET `/api/v1/jobs/{job_id}`
-Get job details.
+One job. `404 NOT_FOUND` when the id is unknown.
 
 ### POST `/api/v1/jobs/refresh`
-Trigger controlled job refresh/import. This should normally be executed asynchronously.
+Re-ingest the dataset at `JOB_DATASET_PATH` and return a summary:
+
+```json
+{
+  "data": {
+    "rows_read": 55194, "inserted": 55194, "updated": 0,
+    "unchanged": 0, "rejected": 0, "stored": 55194
+  },
+  "error": null,
+  "request_id": ""
+}
+```
+
+Re-running over unchanged source data returns `inserted: 0` and
+`updated: 0` — no row is written. `rejected` counts rows the `jobs` table
+cannot hold because a NOT NULL column is absent from the source; they are
+counted rather than dropped silently.
+
+`503 JOB_SOURCE_UNAVAILABLE` when the dataset file is missing.
+
+**Execution model.** Section 4 says refresh should "normally" run
+asynchronously. It does not yet: this route is synchronous and the request lasts
+as long as the import, which for the full 55k-row Ashby slice is minutes.
+`DEPLOYMENT.md` section 4 puts ingestion on a background worker, which arrives
+with the worker container in a later phase. Until then, the initial bulk load is
+better done offline with `scripts/import_jobs.py`, which calls the same service
+function so the two paths cannot diverge.
 
 ## 5. Matching
 
@@ -235,6 +276,7 @@ CONFLICT
 IDEMPOTENCY_CONFLICT
 DATABASE_UNAVAILABLE
 OBJECT_STORAGE_UNAVAILABLE
+NOT_FOUND
 INTERNAL_ERROR
 ```
 
