@@ -9,9 +9,11 @@ are what later phases read.
 
 import hashlib
 import logging
+from dataclasses import asdict
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from pydantic import ValidationError
 
 from app.core.config import get_settings
 from app.core.errors import AppError
@@ -20,6 +22,7 @@ from app.models.resume import Resume
 from app.repositories import profiles as profile_repo
 from app.repositories import resumes as resume_repo
 from app.schemas.resume import ResumeData, ResumeUploadResult
+from app.schemas.profile import ProfileUpdateRequest
 from app.services import profile as profile_service
 from app.services.resume_parser import parse_resume
 from app.services.resume_text import PDF_MIME_TYPE, extract_text
@@ -60,6 +63,8 @@ async def ingest_resume(
     """
     settings = get_settings()
 
+    if mime_type in {"", "application/octet-stream"} and filename.lower().endswith(".pdf") and data.startswith(b"%PDF-"):
+        mime_type = PDF_MIME_TYPE
     if mime_type != PDF_MIME_TYPE:
         raise AppError("INVALID_RESUME", "Only PDF resumes are supported.", 415)
     if not data:
@@ -91,10 +96,13 @@ async def ingest_resume(
         )
 
     storage_key = f"resumes/{user_id}/{checksum}.pdf"
-    await storage.put(storage_key, data, PDF_MIME_TYPE)
-
     text = extract_text(data, mime_type)
     parsed = parse_resume(text)
+    try:
+        ProfileUpdateRequest.model_validate(asdict(parsed))
+    except ValidationError as exc:
+        raise AppError("INVALID_RESUME", "The extracted profile exceeds supported limits. Simplify the resume and retry.", 413) from exc
+    await storage.put(storage_key, data, PDF_MIME_TYPE)
 
     created = existing is None
     if existing is not None:

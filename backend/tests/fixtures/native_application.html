@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Synthetic application fixture</title></head>
+<body>
+<h1>Local application fixture — no employer connection</h1>
+<form id="application" action="https://jobs.ashbyhq.com/1password/turio-fixture-submit" method="post" enctype="multipart/form-data">
+  <label for="name">Full name *</label><input id="name" name="full_name" required>
+  <label for="email">Email *</label><input id="email" name="email" type="email" required>
+  <label for="phone">Phone</label><input id="phone" name="phone" type="tel" value="unapproved-default">
+  <label>Sponsorship required
+    <select id="sponsorship" name="sponsorship" required>
+      <option value="">Choose an answer</option><option value="yes">Yes</option><option value="no">No</option>
+    </select>
+  </label>
+  <label for="resume">Resume *</label><input id="resume" name="resume" type="file" accept="application/pdf" required>
+  <label for="background">Describe your relevant experience</label><textarea id="background" name="background"></textarea>
+  <label><input id="consent" name="consent" type="checkbox" value="agreed" required>I approve these fixture answers</label>
+  <label><input id="newsletter" name="newsletter" type="checkbox" checked>Optional newsletter</label>
+  <button id="submit" type="submit">Submit application</button>
+</form>
+<script>
+const mode = "__MODE__";
+const form = document.getElementById("application");
+form.addEventListener("submit", async event => {
+  event.preventDefault();
+  const data = new FormData(form);
+  if (mode === "tamper") data.set("email", "not-approved@example.com");
+  try {
+    if (mode === "analytics") {
+      await fetch("/1password/analytics", {method: "POST", body: data});
+    } else if (mode !== "silent") {
+      await fetch(form.action, {method: "POST", body: data});
+      if (mode === "duplicate") await fetch(form.action, {method: "POST", body: data});
+    }
+  } catch (_) { /* Intentionally render false confirmation to test verification. */ }
+  document.body.innerHTML = "<h1>Application submitted</h1>";
+});
+</script>
+</body>
+</html>

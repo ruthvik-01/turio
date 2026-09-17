@@ -1,0 +1,2 @@
+# Optional semantic matching runtime. Core baselines do not require downloads.
+sentence-transformers==6.0.1

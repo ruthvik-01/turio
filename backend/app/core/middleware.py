@@ -7,6 +7,7 @@ structured access log line per request.
 
 import logging
 import time
+import re
 from uuid import uuid4
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -22,7 +23,8 @@ REQUEST_ID_HEADER = "X-Request-ID"
 
 class RequestIdMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        request_id = request.headers.get(REQUEST_ID_HEADER) or str(uuid4())
+        supplied = request.headers.get(REQUEST_ID_HEADER) or ""
+        request_id = supplied if re.fullmatch(r"[A-Za-z0-9_.:-]{1,128}", supplied) else str(uuid4())
         token = request_id_var.set(request_id)
         started = time.perf_counter()
         status_code = 500

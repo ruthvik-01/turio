@@ -10,6 +10,8 @@ from app.core.db import get_session
 from app.schemas.envelope import Envelope, envelope
 from app.schemas.resume import ResumeUploadResult
 from app.services.resume_pipeline import ingest_resume
+from app.core.config import get_settings
+from app.core.errors import AppError
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
 
@@ -34,13 +36,19 @@ async def upload_resume(
     session: SessionDep,
     storage: StorageDep,
 ) -> Envelope[ResumeUploadResult]:
+    chunks, size = [], 0
+    while chunk := await file.read(64 * 1024):
+        size += len(chunk)
+        if size > get_settings().max_resume_bytes:
+            raise AppError("INVALID_RESUME", "The resume exceeds the upload size limit.", 413)
+        chunks.append(chunk)
     result, created = await ingest_resume(
         session,
         storage,
         user_id=user_id,
         filename=file.filename or "resume.pdf",
         mime_type=file.content_type or "",
-        data=await file.read(),
+        data=b"".join(chunks),
     )
 
     # 201 only when a new resume was recorded; a repeat of the same bytes is a

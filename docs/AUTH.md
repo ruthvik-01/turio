@@ -68,3 +68,8 @@ At minimum:
 - valid refresh rotates token,
 - reused refresh token revokes its family,
 - another user's resource cannot be accessed.
+
+The product UI smoke additionally verifies HTTP-only/SameSite cookies, absence
+of tokens in browser storage, same-origin mutation enforcement, logout cookie
+deletion and protected back-navigation. The transient UI logout flag suppresses
+only the competing redirect during sign-out; it does not weaken API authentication.

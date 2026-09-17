@@ -9,8 +9,10 @@
 
 ## Current phase
 
-**Phase 3 — Job Dataset & Ingestion** — `[~]` built and passing against SQLite;
-awaiting verification against the composed stack.
+**Sequential completion: real PostgreSQL ingestion verification** — `[!]`
+NUL normalization regression passes; a fresh-stack rerun is blocked by C: capacity
+and Ubuntu WSL I/O errors. No full-import pass is claimed.
+**Phase 3 PostgreSQL/MinIO/Compose verification is still outstanding.**
 
 ## Documentation reconciliation completed
 
@@ -304,7 +306,154 @@ GET /profiles/me                             200  version=3
 
 Awaiting user confirmation before opening Phase 3.
 
+## Phase 3 ingestion regression fix — 2026-09-15
+
+- Fixed duplicate records across commit batches by retaining inserted IDs/hashes in the per-run lookup.
+- Fixed stale hashes after updates so last occurrence wins, including A -> B -> A input.
+- Added permanent regression coverage: identical duplicates/re-ingestion and changed duplicates across batch sizes 1, 2, 1000 with new/existing rows.
+- RED: unique-constraint failure for cross-batch duplicates; wrong final title for changed duplicates. Both reproduced before the corresponding fixes.
+- GREEN: full backend suite `66 passed in 20.32s`; `git diff --check` and repository structure check pass.
+- No public API, schema, dependency or phase change. Existing user edits to `scripts/import_jobs.py` preserved.
+- PostgreSQL/Compose verification remains BLOCKED: Docker CLI unavailable; Ubuntu lacks Docker/PostgreSQL; docker-desktop WSL disk missing (`HCS/ERROR_PATH_NOT_FOUND`). No infrastructure repair attempted.
+
+## Product implementation checkpoint — 2026-09-15
+
+### Built
+- Explicit keyword/TF-IDF/SBERT matching methods, configurable weights, pinned model revision, content-addressed embedding caches, stale-result invalidation and grounded score evidence.
+- User-scoped application persistence, idempotent creation/answers/approval, exact review snapshots, confirmed-answer reuse, factual draft starters, manual tracking and dashboard summaries.
+- Conservative experimental Ashby adapter using Browser Use plus deterministic Playwright operations. It is disabled by default; no company is verified. Pre-approval network mutations and ambiguous/unsupported controls are blocked.
+- Product frontend: landing, authentication, onboarding/profile/resume editing, dashboard, jobs/detail, application preparation/review/tracking, interviews and resources. Original frontend direction retained.
+- HTTP-only cookie proxy with same-origin mutation checks, two Alembic migrations, optional dependency/build flags, development CI definition and evaluation metrics/CLI.
+
+### Verified evidence
+- Full backend suite with `TURIO_ML_SMOKE=1` and `HF_HUB_OFFLINE=1`: **98 passed in 49.59s**. Includes the real pinned model through the API and cache; database/storage fixtures remain SQLite/in-memory.
+- Frontend TypeScript checks and production build passed (15 listed page/API entries including framework routes).
+- Public model smoke: pinned all-MiniLM-L6-v2 revision, 384 dimensions; related synthetic text cosine 0.69054848 versus unrelated text 0.03319634. **A functional smoke only, not a research-quality result.**
+- `pip check`: no broken requirements.
+- `alembic upgrade head --sql` generated PostgreSQL DDL through `f720ce0143a9`; this is **offline compilation, not migration execution on PostgreSQL**.
+- `git diff --check` passed.
+- After explicit approval, the product UI smoke passed all nine check groups in 5.39s on Chromium 151.0.7922.34 with no uncaught page errors. Signup, resume/profile, job search/matches/detail, manual application tracking/dashboard, cookies, cross-origin rejection, loaded mobile layouts and logout/back-navigation were exercised. Report: `docs/evidence/ui-smoke-2026-09-15.json`.
+- After the UI logout fix, the production frontend rebuilt successfully and the complete backend/model suite passed again: **98 passed in 51.11s**.
+
+### Still unverified / incomplete
+- Phase 3 real Compose/PostgreSQL/MinIO verification and full real-data re-import.
+- Local native adapter operations are verified in the subsequent checkpoint below. Live employer automation remains unverified; the product UI smoke itself exercises disabled browser assistance and manual tracking.
+- Live employer form support/submission, native-control coverage beyond the bounded adapter, durable workers and interrupted-operation reconciliation.
+- Final annotated matching benchmarks, multimodal/structured-fusion research comparison, edge optimization, validated ARS, and production hardening.
+- CI and optional Docker build definitions have not run in their target environments.
+
+Reproduction details: `docs/evidence/2026-09-15-development.md`. No real job
+application was submitted, no real dataset import occurred in this checkpoint,
+and no phase is marked VERIFIED solely because code now exists.
+
+## Phase 6 local native-browser checkpoint — 2026-09-15
+
+- **130 passed in 117.77s**, no failures or skips; no warnings reported in the final run. Includes **17 actual-browser cases**, **14 payload-permit cases**, backend regressions and the real-model API/cache smoke.
+- Used the pinned Browser Use/Playwright runtime with installed Chromium and terminal in-memory request interception. No requests were forwarded to employers.
+- Reproduced and fixed dropdown label contamination, unapproved defaults, undetected action changes, false confirmation via unrelated POSTs, altered/duplicate outgoing POSTs and missing original-resume checksum validation.
+- `native-form-v2` binds the reviewed native form action, method, encoding, control names and values. A single-use permit checks the actual outgoing body and file metadata/digest before allowing the one POST.
+- The actual API path was exercised through stored resume → inspect/map → answers → review → explicit approval → browser fixture submission. Repeated approval returns the existing result without another browser or POST.
+- CAPTCHA/custom controls stop; field retries are bounded; page WebSockets/service workers are blocked; context/CDP/browser cleanup and post-exit port closure are checked.
+- Frontend production build passed, with no frontend design/code changes in this checkpoint.
+- Retained evidence: `docs/evidence/phase6-local-2026-09-15.xml`, `.json`, and `phase6-local-verification-2026-09-15.md`.
+- Added native-browser CI coverage, but no remote CI run is claimed.
+
+**This completes local native-form verification, not all of Phase 6.**
+No company is verified. Hidden/CSRF fields, upload/read RPCs, custom serializers
+and redirect confirmation need separate audits. Browser assistance stays disabled
+by default. PostgreSQL/MinIO, durable workers/recovery, live-site evidence and final
+research remain open.
+
+## Durable database-worker checkpoint — 2026-09-15
+
+- Added `agent_runs`, a partial unique active-resource index, owner-scoped run APIs, idempotency aliases and migration `b491ef087a52`.
+- Worker executes only `jobs_refresh` and `matches_refresh`; there is no queued application/submission type or dynamic dispatch.
+- Atomic claims, renewable token-bound leases, pre-commit checkpoints and fenced completion protect against stale workers. Expiry/lost heartbeat/shutdown mark work interrupted; no automatic replay. Only queued work can be cancelled.
+- Existing synchronous APIs/CLI remain compatible. The jobs UI now queues work and observes persisted status/results without a design change.
+- Added the Compose worker definition and Windows-compatible database-worker CLI.
+- **145 passed in 128.85s**, with no failures or skips. Includes **15 worker cases**, separate-process persistence, the native browser fixtures and real-model API smoke.
+- Worker-integrated headless UI: **11 check groups passed in 10.45s**, with no uncaught page errors.
+- Frontend build/typecheck and whitespace checks passed. PostgreSQL DDL compiled offline through the new head.
+- Evidence: `docs/evidence/durable-worker-2026-09-15.xml`, `.json`, `worker-ui-smoke-2026-09-15.json`, and `durable-worker-verification-2026-09-15.md`.
+
+This is database-worker development evidence, not live PostgreSQL/MinIO/Compose
+verification. Browser preparation/review/submission and their interruption
+reconciliation remain outside this queue. Real-site support, remote CI, rate
+limits/deployment hardening and final research remain open.
+
+## Real-stack continuation and storage blocker — 2026-09-15
+
+- With explicit approval, installed Docker Engine/Compose in the existing Ubuntu WSL distribution without deleting Docker Desktop data.
+- An isolated real PostgreSQL/MinIO/API/worker/frontend stack built and started. Authentication, profile updates, synthetic PDF upload and anonymous object-access denial were exercised successfully.
+- Full dataset import failed after 12,000 committed jobs. A full CSV scan identified one NUL-containing description at data row 12,980 among 55,194 rows; no overlong constrained fields were found.
+- Added reversible UTF-8/base64 provenance for exceptional raw fields and NUL-to-whitespace normalization for stored text. RED reproduced; GREEN: focused NUL regression **1 passed**.
+- Before a fresh rerun, WSL reported I/O errors and C: had only about 10 MB free. Removed only verified Torch/SciPy wheel download caches created in this session (160,736,706 bytes), not installed packages or user files. C: then had approximately 0.5 GB free; D: approximately 256 GB.
+- The old isolated project remains `turio-verify-20260915-50912c`; the attempted shutdown/fresh-project sequence stopped before changes because Docker could not execute. Existing volumes were not deleted.
+- Further full-stack work requires sufficient C: space or explicit approval to relocate Ubuntu WSL storage. No distribution unregister/delete operation was performed.
+
 ## Evidence rule
+
+## Real PostgreSQL job-import completion — 2026-09-16
+
+- D:-backed Compose services were healthy and PostgreSQL was at Alembic head `f192dea57304`.
+- The isolated database contains **55,189** valid jobs from **55,194** source rows; five rows lacking required fields were rejected.
+- A complete re-import was idempotent: `inserted=0`, `updated=0`, `unchanged=55189`, `rejected=5`.
+- The self-cleaning PostgreSQL probe verified normalization, nullable optional fields, content-hash updates and unchanged-update no-ops.
+- Stored descriptions contain zero NUL bytes; exactly one exceptional raw field retains tagged UTF-8/base64 provenance.
+- Authenticated API listing reported `total=55189`, returned the requested page, and its detail endpoint matched the listed job ID.
+- Evidence: `docs/evidence/postgresql-job-import-2026-09-16.json`.
+
+## Phase 3 report — Job Dataset & Ingestion
+
+Status: **VERIFIED for functional scope** on 2026-09-16.
+
+Exit checklist:
+- PASS — complete re-import was idempotent.
+- PASS — five malformed rows were explicitly rejected; valid optional missing fields remain null.
+- PASS — PostgreSQL content-hash update and unchanged no-op probe passed.
+
+Compatibility check vs Phase 2:
+- PASS — job APIs require authentication.
+- PASS — ingestion stores only job/job-source data; profile/resume flows remained intact in composed verification.
+
+Evidence: `docs/evidence/postgresql-job-import-2026-09-16.json`.
+
+Known issue carried forward: the synthetic 0.4-second unchanged-import heartbeat
+test remains a hardening TODO and does not block Phase 3 functional completion.
+
+User authorized Phase 4 to start on 2026-09-16.
+
+## Phase 4 start — Matching & Ranking
+
+- Focused matching/model/benchmark/evaluation suite: **18 passed in 41.13s** with the pinned model loaded offline.
+- Covered grounded and repeatable rankings, profile/inventory invalidation, embedding-cache reuse, authorization, keyword/TF-IDF/SBERT paths, weight validation, frozen-manifest tamper detection and human-label requirements.
+- Phase 3 compatibility coverage confirms inventory changes invalidate stale results and appear in regenerated matching output.
+- Implementation checklist is present; Phase 4 remains active because final baseline comparison numbers require a frozen, consented, human-annotated benchmark. Labels will not be synthesized from model scores.
+
+## Phase 4 benchmark tooling checkpoint — 2026-09-16
+
+- Audited the Phase 4 benchmark preparation, freezing, persistence and evaluation path against `AI_MATCHING.md`, `DATASET.md` and `EVALUATION.md`.
+- Added explicit candidate and annotated-benchmark JSON schemas plus `docs/PHASE4_BENCHMARK.md`.
+- Froze the final protocol in code: **10 anonymized profiles × 50 jobs × 2 independent annotators = 500 profile/job pairs and 1,000 individual annotation records**.
+- Each annotator supplies mandatory 0–3 overall relevance and nullable 0–3 skill, experience, education and location diagnostics. Human adjudication supplies resolved labels; any disagreement requires a resolution note.
+- Freeze validation now rejects undersized self-declared benchmarks, missing annotators, invalid labels, inconsistent unanimous resolutions, unsupported resolved diagnostic labels and post-freeze/config tampering.
+- Annotation persistence now stores the four diagnostic labels as well as relevance.
+- Evaluation reports now retain protocol metadata, per-candidate relevant counts and the number of candidates with no relevant item. Existing reports cannot be overwritten.
+- Ranking metrics continue to use only resolved human relevance: binary `relevance > 0` for Precision@K, Recall@K and MRR, and graded 0–3 relevance for nDCG@K.
+- Verification: **20 focused Phase 4 tests passed in 12.15s** with the pinned model offline; benchmark scripts compiled, both JSON schemas parsed, and `git diff --check` passed.
+
+**Human-data boundary:** no effectiveness result exists yet. Phase 4 cannot
+complete until the consented, anonymized 500-pair dataset has been independently
+annotated and adjudicated. No labels or benchmark scores were generated.
+
+## User-reported login regression — resolved 2026-09-16
+
+- Reproduced signup rejection before the backend: frontend returned 403, “A same-origin request is required.”
+- Corrected the proxy origin comparison for externally mapped Docker ports; a missing Origin requires both a matching Referer and `Sec-Fetch-Site: same-origin`. Explicit mismatched Origins are still rejected.
+- Typecheck and production build passed; the Compose frontend was rebuilt and deployed.
+- Real-browser verification on port 13000: signup → onboarding, logout → landing, login → home, reload retains session, two HTTP-only SameSite=Lax cookies, logout removes cookies.
+- Seven deployed origin-guard regression checks passed. Reproducer: `scripts/verify_auth_proxy.py`; evidence: `docs/evidence/auth-proxy-2026-09-16.json`.
+- Existing user accounts were not edited. A dedicated test account was used and logged out. Phase 4 remains active; no later phase was opened.
 
 Each `[x]` implementation item must have evidence:
 
@@ -313,3 +462,133 @@ Each `[x]` implementation item must have evidence:
 - commit,
 - experiment result,
 - or reproducible artifact reference.
+
+
+## Requested opportunity maintenance — 2026-09-16
+
+Implemented source-backed deadlines/logos, readable stored descriptions, Apply with
+Agent wiring and reusable-resume fixes without changing the architecture, trial
+allowlist or approval safeguards. Deployed additive migration `a230916001` and
+rebuilt the existing local stack. The operational Stapply union now contains
+56,339 stored jobs (+1,150), with 290 source-backed logo records and no invented
+deadlines. The 3,448-company discovery catalog makes no automation-support claims.
+The original Phase 4 source CSV remains unchanged.
+
+Verification: 111 focused tests passed; the final full run had 179 passed and the
+one pre-existing 0.4-second heartbeat failure. Frontend typecheck/build, PostgreSQL
+expiry/update/no-op probe and eight deployed browser check groups passed. Native
+resume/submission tests and final-review UI use explicit intercepted fixtures;
+no employer application was submitted. Phase 4 remains at the human-data gate;
+Phase 5 was not opened. Full changed-file list, scope and evidence:
+[[evidence/opportunity-maintenance-2026-09-16]].
+
+## Jobs Company filter fix — 2026-09-16
+
+Replaced the free-text Company filter with an accessible autocomplete backed by
+all 3,448 existing catalog entries. Selection uses canonical company names;
+Platform remains independent. No database migration or Phase 5 work.
+
+Verification: 34 focused tests passed; full suite 182 passed plus the existing
+short-lease heartbeat failure. Frontend typecheck/build and deployment passed.
+Eight real-catalog browser checks and eight existing opportunity UI checks passed,
+with no uncaught page errors or employer submissions. Full files/evidence:
+[[evidence/company-filter-2026-09-16]].
+
+## Phase 4 report — engineering verification (2026-09-17)
+
+Status: BLOCKED at the human benchmark gate; technical checks PASS.
+
+Exit checklist: config weights, grounded explanations, version/hash cache invalidation
+and repeatable rankings PASS. Compatibility vs Phase 3: repository access and
+refresh-to-regenerated-matches API regression PASS. Unchanged-import heartbeat
+starvation fixed without relaxing the lease or fencing.
+
+Evidence: [[evidence/phase4-engineering-2026-09-17]] — full backend 185 passed,
+targeted PostgreSQL 7 passed, frontend typecheck/build passed.
+
+Known gate: 10 consented profiles, 500 candidate/job pairs, 1,000 independent
+human annotation records and adjudication/frozen baseline comparisons. Synthetic
+functional tests are not effectiveness evidence. No Phase 5 or visible-browser
+implementation started; explicit submission approval remains unchanged.
+
+## Phase 4 intake/runtime follow-up — 2026-09-17
+
+Prepared the real 50-job pool (original CSV, seed turio-phase4-v1), source hash,
+and consent/anonymization/independent-annotation handoff. No candidate records
+or labels fabricated. Twelve benchmark preparation/safeguard tests pass.
+Attached Compose launcher with SkipBuild kept local services running for 16
+minutes; API and frontend return 200. Reboot/long-duration stability unproven.
+Next: receive 10 consented reviewed profiles, produce 500 pairs and obtain
+1,000 independent human judgments. Phase 5 remains on hold.
+Evidence: [[evidence/phase4-intake-runtime-2026-09-17]]. Guide: [[PHASE4_INTAKE]].
+
+## Correction: candidate intake is synthetic — September 17, 2026
+
+The user explicitly confirmed all ten supplied profiles are synthetic, not real
+consented participants. They are not human ground truth and must not be frozen
+or evaluated. Moved candidates.json and draft.json out of active phase4-intake
+into ignored experiments/phase4-synthetic-intake, with explicit provenance and
+DO NOT FREEZE OR EVALUATE notices. Consent remains false and labels remain empty.
+The real source-backed job-pool.json is unchanged. No freeze or evaluation ran.
+Phase 4 stays at the human-data boundary; zero eligible human profiles received.
+Phase 5 remains on hold under the sequential verification gate.
+
+## Phase 5 synthetic functional verification — 2026-09-17
+
+User-authorized bounded ordering exception recorded as ADR-038. Phase 4 remains
+unverified at its human-data boundary; quarantined synthetic intake is not frozen
+or evaluated. Added one two-job resume/profile/missing-answer/review regression.
+59 targeted backend tests and 5 intercepted native-browser preparation cases pass;
+frontend typecheck/build pass. No production-code changes or live submissions.
+This is a successful bounded verification pass, not full Phase 5 certification.
+Next: remaining state-transition and frontend workflow coverage using fixtures.
+Evidence: [[evidence/phase5-functional-verification-2026-09-17]].
+
+## Engineering completion continuation — September 17, 2026
+
+User authorized continuing engineering without intermediate phase reviews (ADR-039).
+Added safe disposable UI application workflow/sentinel, dedicated PostgreSQL runner
+and CI job, and cancellation/approval regression coverage. Applied unless-stopped
+restart policies to all Compose services; all running and API/login return 200.
+
+Full backend/browser/model run: 189 passed; new verification-tool tests: 6 passed;
+new transition cases: 4 passed. Fresh PostgreSQL migrations and schema-drift check
+passed; Linux/PostgreSQL suite: 177 passed, 18 optional skips. No production data
+reset. Frontend code unchanged; its preceding build/typecheck remained valid.
+
+The complete new UI smoke run is blocked because this environment refused launching
+its separate frontend server. Fixture backend/unit/sentinel tests pass, but that
+is not full UI verification. Human effectiveness and live-company gates remain
+open; synthetic intake was not frozen/evaluated. Not marking the project finished.
+Evidence: [[evidence/final-engineering-2026-09-17]].
+
+## Frontend contract continuation — September 17, 2026
+
+The isolated frontend-server launch was denied again; no bypass attempted.
+Added frontend-only intercepted-response verification against the existing local
+frontend: 7 checks passed, 13 API requests intercepted, zero unexpected requests
+or page errors. Includes missing/draft confirmation, fresh approval after edits,
+mobile overflow and same-key retry. No backend writes or employer calls.
+
+Added application-ui CI job for the full guarded fixture integration workflow.
+Python/YAML/shell syntax and test-only settings passed. No remote CI execution
+or source publication. Full real UI/proxy/API integration still awaits a permitted
+fixture-server launch or authorized CI run. No benchmark freezing/evaluation.
+Evidence: [[evidence/application-ui-contract-2026-09-17]].
+
+## Cross-phase tooling completion — September 17, 2026
+
+ADR-040 records the request to finish implementable phase work without inventing
+acceptance evidence. Added explicit browser headless configuration (safe default
+true); visible mode requires a desktop on the backend host and is not streaming.
+Reproduced/fixed Unicode corruption in research freeze CLI file I/O using a stubbed
+serialization test, not the quarantined benchmark. Added safe new-output handling
+and CPU/scope metadata to the local mapping microbenchmark.
+
+Full backend/native-browser/pinned-model suite: 202 passed in 133.48s. Backend and
+worker rebuilt/deployed; API/login return 200; automation remains false/headless
+true. Local mapping cache measured 16.64x faster on 38 fixed field labels with
+identical outputs (not human accuracy or live ATS evidence). Full guarded UI run,
+human effectiveness and real-company validation remain open. No synthetic intake
+freeze/evaluation or real submission. Matrix: [[DELIVERY_STATUS]]. Evidence:
+[[evidence/phase-tooling-2026-09-17]].

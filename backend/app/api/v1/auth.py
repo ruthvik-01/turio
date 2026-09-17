@@ -7,7 +7,7 @@ valid access token.
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUserId
@@ -22,6 +22,7 @@ from app.schemas.auth import (
 )
 from app.schemas.envelope import Envelope, envelope
 from app.services import auth as auth_service
+from app.services import rate_limits
 
 public_router = APIRouter(prefix="/auth", tags=["auth"])
 protected_router = APIRouter(prefix="/auth", tags=["auth"])
@@ -36,7 +37,8 @@ SessionDep = Annotated[AsyncSession, Depends(get_session)]
     summary="Create an account and issue the first token pair",
     responses={409: {"description": "Email already registered"}},
 )
-async def register(payload: RegisterRequest, session: SessionDep) -> Envelope[AuthData]:
+async def register(payload: RegisterRequest, session: SessionDep, request: Request) -> Envelope[AuthData]:
+    await rate_limits.auth(session, request, "register", payload.email)
     data = await auth_service.register(session, email=payload.email, password=payload.password)
     return envelope(data)
 
@@ -47,7 +49,8 @@ async def register(payload: RegisterRequest, session: SessionDep) -> Envelope[Au
     summary="Exchange credentials for a token pair",
     responses={401: {"description": "Invalid credentials"}},
 )
-async def login(payload: LoginRequest, session: SessionDep) -> Envelope[AuthData]:
+async def login(payload: LoginRequest, session: SessionDep, request: Request) -> Envelope[AuthData]:
+    await rate_limits.auth(session, request, "login", payload.email)
     data = await auth_service.login(session, email=payload.email, password=payload.password)
     return envelope(data)
 
@@ -58,7 +61,8 @@ async def login(payload: LoginRequest, session: SessionDep) -> Envelope[AuthData
     summary="Rotate a refresh token",
     responses={401: {"description": "Refresh token invalid, expired or reused"}},
 )
-async def refresh(payload: RefreshRequest, session: SessionDep) -> Envelope[AuthData]:
+async def refresh(payload: RefreshRequest, session: SessionDep, request: Request) -> Envelope[AuthData]:
+    await rate_limits.auth(session, request, "refresh")
     data = await auth_service.refresh(session, raw_token=payload.refresh_token)
     return envelope(data)
 

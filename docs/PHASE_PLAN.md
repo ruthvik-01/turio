@@ -8,6 +8,8 @@ Without this file, an agent tends to: read every doc every session, build severa
 
 This file is read alongside `CLAUDE.md`, not instead of it. `CLAUDE.md` governs *how* to work inside a task. This file governs *which phase is active* and *when to stop*.
 
+September 17 authorization (ADR-039): continue engineering/integration without intermediate user phase reviews. This scoped ordering exception does not mark unmet human-data, live-company or final acceptance gates verified.
+
 ## 1. Non-negotiable rules for the agent
 
 1. Work on exactly **one phase** at a time, in order. Never start Phase N+1 while Phase N is not marked `[x] VERIFIED` below.
@@ -108,7 +110,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 3 — Job Dataset & Ingestion
-**Status:** [~] — built; verification against the composed stack in progress
+**Status:** [x] VERIFIED — functional scope complete; short-lease heartbeat regression resolved September 17
 
 **Objective:** A populated, deduplicated, queryable job database.
 
@@ -133,7 +135,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 4 — Matching & Ranking
-**Status:** [ ]
+**Status:** [~] — ACTIVE; technical and integration checks pass; consented human-annotated baseline evaluation remains open
 
 **Objective:** Given a profile and the job database, produce an explainable ranked list.
 
@@ -149,19 +151,25 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 **Deliverables:** a real profile returns a ranked, explained job list; baseline comparison numbers exist.
 
 **Exit checklist:**
-- [ ] Score weights are stored in a config, not hardcoded inline
-- [ ] Every explanation only cites evidence actually present in the stored profile/job data (no fabricated skill claims)
-- [ ] Embeddings are cached by `profile_version`/`content_hash` — recomputation only happens when inputs change
-- [ ] Same profile + same job database + same config produces the same ranking (reproducible)
+- [x] Score weights are stored in a config, not hardcoded inline
+- [x] Every explanation only cites evidence actually present in the stored profile/job data (no fabricated skill claims)
+- [x] Embeddings are cached by `profile_version`/`content_hash` — recomputation only happens when inputs change
+- [x] Same profile + same job database + same config produces the same ranking (reproducible)
 
 **Compatibility check against Phase 3:**
-- [ ] Matching reads jobs exclusively through the Phase 3 job repository/API — no direct ad-hoc queries bypassing normalization
-- [ ] A job added after Phase 3 (via `/jobs/refresh`) shows up in matching without a manual step
+- [x] Matching reads jobs exclusively through the Phase 3 job repository/API — no direct ad-hoc queries bypassing normalization
+- [x] A job added after Phase 3 (via `/jobs/refresh`) shows up in matching without a manual step
+
+Technical evidence: [[evidence/phase4-engineering-2026-09-17]]. This does not close the human effectiveness benchmark required by [[PHASE4_BENCHMARK]]. No Phase 5 work is authorized by these checks.
 
 ---
 
 ### Phase 5 — Application Intelligence
-**Status:** [ ]
+**Status:** [~] — implemented and tested against explicit form fixtures; live end-to-end verification open
+
+September 17 user-authorized exception: synthetic functional verification may
+proceed under ADR-038 while Phase 4 remains blocked on human data. This does not
+authorize freezing/evaluating the synthetic benchmark or any live submission.
 
 **Objective:** For a selected job, produce a filled-but-unsubmitted application ready for human review.
 
@@ -188,7 +196,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 6 — Browser Automation (Ashby)
-**Status:** [ ]
+**Status:** [~] — native runtime/transport/API verified on local fixtures; disabled by default, no live company verified
 
 **Objective:** The Phase 5 review payload gets filled into a real browser form and submitted only on explicit approval.
 
@@ -201,6 +209,10 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 **Docs to read:** `APPLICATION_AUTOMATION.md`, `SUPPORTED_COMPANIES.md`, `AGENT_ARCHITECTURE.md` §5 (bounded autonomy/retry)
 
 **Deliverables:** at least one company (start with 1Password) has a fully tested, evidenced application run.
+
+Local milestone evidence: `evidence/phase6-local-verification-2026-09-15.md`
+records real-browser fixtures and the API/approval path. It does not satisfy the
+live-company deliverable or close this phase.
 
 **Exit checklist:**
 - [ ] Submission never happens without a prior explicit `approve-submit` call from the user
@@ -217,7 +229,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 7 — Research Extensions
-**Status:** [ ]
+**Status:** [~] — annotation/comparison tooling and structured late fusion implemented; local mapping-cache performance measured; human effectiveness and visual-modality evidence absent
 
 **Objective:** Satisfy the coordinator-required research scope with measured results.
 
@@ -242,7 +254,7 @@ Each phase lists: objective, exact scope, minimum docs to read, deliverables, ex
 ---
 
 ### Phase 8 — Finalization
-**Status:** [ ]
+**Status:** [~] — engineering integration underway under ADR-039; full UI, human evaluation and live-company acceptance remain open
 
 **Objective:** A demo-ready, evaluated, deployed system with report evidence.
 

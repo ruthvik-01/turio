@@ -171,6 +171,126 @@ Status values:
 **Impact:** Touches Phase 2's parser, which `PHASE_PLAN.md` section 1.3 requires be recorded first — this entry is that record. Phase 2's exit checklist is re-run afterwards. The shared lexicon also drops bare `c` and `r`, which match ordinary prose far too often to be useful.
 **Evidence:** `backend/app/services/skills.py`; `backend/tests/test_auth.py` and `test_resumes.py` re-run green.
 
+## ADR-028 — Continue product implementation while infrastructure verification is open
+**Status:** Accepted, 2026-09-15; explicitly authorized in-session.
+**Decision:** Implement the remaining product slices without waiting for Docker. Do not mark Phase 3 PostgreSQL/Compose verification or later live-site/research criteria verified without evidence.
+**Impact:** Preserve existing ingestion fixes and the approved cream/green, top-navigation frontend direction. Local automated tests are development evidence, never a substitute for the outstanding PostgreSQL gate.
+
+## ADR-029 — Explicit matching methods and content-addressed caches
+**Status:** Accepted, 2026-09-15.
+**Decision:** Support labeled keyword, TF-IDF and configurable Sentence-Transformer methods. Missing SBERT dependencies/model files fail explicitly; there is no silent baseline substitution. Store embedding caches and match evidence in PostgreSQL JSONB, using the existing SQLite type variants only for unit tests. Ranking weights and model configuration live in a versioned JSON file. Cache identities include model/revision, representation version, profile version and job content hash; ranked results also identify the inventory/config.
+**Reasoning:** Reuses existing persistence without requiring an unmeasured vector service. Baselines work without model downloads and remain visibly distinct from semantic matching. Weights are provisional, not claimed as experimentally optimal.
+
+## ADR-030 — Reviewed application snapshots and conservative browser support
+**Status:** Accepted, 2026-09-15.
+**Decision:** Application state, fields, answers, events and idempotency records are user-scoped and persisted. Final approval binds to a review digest and profile version. Preparation cannot submit. Browser assistance is opt-in and isolated behind an Ashby adapter; no company is advertised as verified until live evidence exists. Submission is never automatically retried after an uncertain outcome.
+**Impact:** Browser Use manages an isolated browser, with deterministic Playwright operations for inspect/fill/validate/submit. No unrestricted LLM receives submission authority. Missing configuration, unsupported controls, CAPTCHA and changed forms stop the workflow rather than fabricate success. Tracking metadata remains usable without browser automation.
+
+## ADR-031 — Frontend session boundary
+**Status:** Accepted, 2026-09-15.
+**Decision:** Next.js proxies same-origin API requests and keeps access/refresh tokens in HTTP-only, SameSite cookies. Token pairs never enter browser storage or client JavaScript. Mutating requests require a same-origin Origin header. Concurrent refresh attempts are coalesced within the frontend process; horizontal scaling needs a shared coordinator.
+**Impact:** Existing FastAPI bearer-token contracts are preserved. HTTPS is required outside localhost. Browser Use 0.11.13 is pinned because newer releases conflict with the verified pypdf version.
+
+## ADR-032 — Validation envelopes and factual draft assistance
+**Status:** Accepted, 2026-09-15.
+**Decision:** Add `INVALID_REQUEST` (422) for sanitized boundary-validation errors and `MODEL_UNAVAILABLE` (503) for explicitly unavailable semantic models. Never echo Pydantic input values. Custom narrative fields may receive a deterministic factual starter from stored profile evidence; it is marked `draft`, unconfirmed, and cannot pass review until the user confirms it. Sensitive/legal questions are excluded.
+**Reasoning:** The UI needs actionable errors and useful answer preparation without inventing candidate facts or requiring an external LLM service. This is template-based assistance, not a claim of generative-model integration.
+
+## ADR-033 — Locally verified native-form submission boundary
+**Status:** Accepted, 2026-09-15.
+**Decision:** Verify the actual pinned Browser Use/Chromium/Playwright path with synthetic forms served entirely by terminal request interception, not employer network traffic. Production destination restrictions remain enabled. The native-form adapter binds approval to the form action, fields and original resume; only one matching POST may leave after authorization. Unknown serialization/transports remain unsupported until separately audited. Isolated browser contexts block service workers and page WebSockets and must be cleaned up.
+**Reasoning:** API tests with a fake adapter cannot establish file upload, browser lifecycle or submission behavior. A click, unrelated successful request or confirmation text alone must not establish submission success.
+**Impact:** Scoped adapter/fixture changes only; no frontend redesign, no relaxed localhost production allowlist, no claim of live Ashby support.
+
+## ADR-034 — Durable database work without queued submissions
+**Status:** Accepted, 2026-09-15.
+**Decision:** Use the existing database for durable job-import and matching runs. Runs have owner-scoped status/results, idempotency, active-resource deduplication, atomic claims, renewable leases and fenced completion/checkpoints. Expired or cancelled work is never automatically replayed. Only queued work can be cancelled.
+**Boundary:** Browser preparation/review/submission remain outside this first queue slice. In particular, no run type can submit an application. Existing synchronous APIs remain compatible; the jobs UI uses the new queue.
+**Reasoning:** Moves the largest database tasks out of HTTP request lifetimes without adding Redis/Celery or weakening immediate submission approval. PostgreSQL deployment/concurrency verification remains a separate gate.
+
+## ADR-035 — Production request limits and recovery boundaries
+**Status:** Accepted, 2026-09-15.
+**Decision:** Enforce database-backed rate windows on authentication and expensive work creation, a bounded request body, sanitized request identifiers and fail-fast production secrets. Persist bounded browser-operation ownership/deadlines so expired preparation is failed and uncertain submission is never replayed. Recovery must fence late request handlers before any state/result commit.
+**Boundary:** Forwarded client-IP headers are not trusted by default. Behind the bundled frontend, peer-IP limits are shared; account/user limits still apply. Live employer submission and research effectiveness remain evidence gates, not claims inferred from code.
+
+## ADR-036 — PostgreSQL-safe source text with reversible provenance
+**Status:** Accepted, 2026-09-15.
+**Decision:** Replace NUL control characters with whitespace in normalized job text. Preserve exceptional original CSV field values as tagged UTF-8/base64 objects in `raw_payload`; ordinary strings remain unchanged. Do not modify the source CSV.
+**Evidence:** The real PostgreSQL import stopped in the batch containing CSV row 12,980. A bounded full-file scan found one NUL-containing description among 55,194 rows and no overlong constrained fields. PostgreSQL cannot store NUL in text/JSONB strings.
+**Impact:** The exceptional row has a stable, PostgreSQL-safe content hash and reversible raw provenance; unchanged ordinary rows retain their hashes.
+
+## ADR-037 — Source-backed opportunity metadata and inventory expansion
+
+**Status:** Accepted for the user's September 16 maintenance request; no new phase opened.
+**Decision:** Add nullable `application_deadline` and `company_logo_url` to existing jobs.
+Only explicit ISO offset timestamps/date-only deadlines and observed HTTPS logo
+URLs are accepted. Date-only deadlines include the full UTC day; offset-free
+timestamps remain unknown. Unknown deadlines retain the existing visible-inventory
+behavior. Eligibility is applied before pagination and matching, and the eligible
+inventory fingerprint invalidates cached recommendations as deadlines pass.
+Description cleanup is deterministic presentation of stored text, not generated
+copy, and does not rewrite the stored matching description.
+
+The expanded Stapply CSV is a separate operational artifact. The original
+`data/ashby-jobs.csv` Phase 4 source is not overwritten. Company/ATS discovery
+does not establish automation support. Existing five trials, disabled-by-default
+browser assistance and immutable explicit-approval submission remain unchanged.
+Preparation may attach a newly uploaded resume only when a draft has no selection;
+it never silently replaces a selected or reviewed document.
+
+**Impact:** Additive migration `a230916001`; existing route/service/repository and
+Browser Use/native transport architecture retained. Generic/empty MIME PDF uploads
+still require PDF magic bytes and successful parsing. No Phase 5 work or research
+labels/results are introduced.
+**Evidence:** [[evidence/stapply-expansion-2026-09-16]],
+[[evidence/company-logo-sources-2026-09-16]] and verification in [[PROGRESS]].
+
+### ADR-038 — Phase 5 synthetic functional verification exception
+**Status:** Accepted for bounded verification, September 17, 2026.
+**Context:** The user confirmed the candidate intake is synthetic and explicitly
+asked to start Phase 5 if the data is used only for verification.
+**Decision:** Permit Phase 5 application-preparation engineering verification
+against synthetic, isolated fixtures while Phase 4 remains unverified at its
+human-data boundary. This is a specific exception to sequential phase ordering,
+not a waiver of human consent, independent annotations or effectiveness evidence.
+**Impact:** Inspect and test the existing application intelligence implementation;
+fix only reproduced defects. Do not freeze/evaluate the synthetic benchmark,
+enable live browser automation, submit to employers or claim company support.
+Explicit submission approval remains mandatory. No architecture replacement.
+**Evidence:** The user's September 17 instruction; results will be recorded in
+[[evidence/phase5-functional-verification-2026-09-17]].
+
+### ADR-039 — Continue engineering completion without phase-review pauses
+**Status:** Accepted, September 17, 2026.
+**Context:** The user requested finishing the project engineering before their
+manual review, rather than stopping after each verification milestone.
+**Decision:** Continue integration, isolated end-to-end tests, database/CI checks
+and runtime hardening without intermediate phase-approval pauses. Human-data
+evaluation and real-company validation remain separate unmet acceptance gates.
+The synthetic intake must not be frozen or evaluated; no live submission or
+automation-support claim is authorized by this continuation.
+**Impact:** Add a guarded disposable UI application adapter/smoke path, a
+dedicated-database PostgreSQL runner and CI job. Align Compose services with the
+worker's `unless-stopped` restart policy so daemon restarts do not revive only
+the worker. Preserve explicit stops, volumes, architecture and submission approval.
+**Evidence:** [[evidence/final-engineering-2026-09-17]].
+
+### ADR-040 — Complete implementable phase tooling without inventing evidence
+**Status:** Accepted, September 17, 2026.
+**Context:** The user requested completion across all phases. Remaining concrete
+engineering gaps include hardcoded headless operation and research CLI portability
+and reporting. Human data and permitted live-company evidence are still absent.
+**Decision:** Add an explicit browser-headless setting, retaining the safe default
+and all approval/domain guards. Correct UTF-8 research-file I/O and make the local
+mapping microbenchmark record CPU scope and refuse historical-report overwrite.
+Use existing structured-context late fusion; do not invent a visual modality,
+human labels or effectiveness improvements without suitable data.
+**Impact:** Visible mode is only visible on the backend host with a desktop
+display. It is not remote browser streaming and does not make Docker's browser
+appear in the user's Chrome. All phase statuses must distinguish implementation
+from unmet acceptance evidence. No synthetic benchmark freeze/evaluation.
+**Evidence:** [[evidence/phase-tooling-2026-09-17]].
+
 ## ADR template
 
 ### ADR-XXX — Title

@@ -5,6 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -205,6 +206,58 @@ async def test_duplicate_rows_within_one_file_produce_one_row(
     assert await job_repo.count(session) == 1
 
 
+async def test_duplicate_rows_across_batches_produce_one_row(
+    session: AsyncSession, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "job_ingest_batch_size", 1)
+    path = write_jobs_csv(tmp_path / "jobs.csv", [job_row(), job_row()])
+
+    summary = await ingest_dataset(session, path=str(path))
+
+    assert summary.rows_read == 2
+    assert summary.inserted == 1
+    assert summary.updated == 0
+    assert summary.unchanged == 1
+    assert await job_repo.count(session) == 1
+    before = await _snapshot(session)
+    repeated = await ingest_dataset(session, path=str(path))
+    assert repeated.inserted == repeated.updated == 0
+    assert repeated.unchanged == 2
+    assert await _snapshot(session) == before
+
+
+@pytest.mark.parametrize("batch_size", [1, 2, 1000])
+@pytest.mark.parametrize("preexisting", [False, True])
+async def test_changed_duplicates_across_batches_keep_last_content(
+    session: AsyncSession,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    batch_size: int,
+    preexisting: bool,
+) -> None:
+    from app.core.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "job_ingest_batch_size", batch_size)
+    if preexisting:
+        seed = write_jobs_csv(tmp_path / "seed.csv", [job_row()])
+        await ingest_dataset(session, path=str(seed))
+    path = write_jobs_csv(
+        tmp_path / "jobs.csv",
+        [job_row(), job_row(title="Staff Python Engineer"), job_row()],
+    )
+
+    summary = await ingest_dataset(session, path=str(path))
+
+    jobs, total = await job_repo.list_jobs(session)
+    assert total == 1
+    assert jobs[0].title == "Senior Python Engineer"
+    assert summary.inserted == (0 if preexisting else 1)
+    assert summary.updated == 2
+    assert summary.unchanged == (1 if preexisting else 0)
+
+
 async def test_missing_dataset_file_is_reported_not_crashed(session: AsyncSession) -> None:
     from app.core.errors import AppError
 
@@ -296,6 +349,20 @@ async def test_job_detail_returns_the_stored_job(
 
 
 # --- Phase 2 compatibility ------------------------------------------------
+
+
+def test_nul_text_is_normalized_and_raw_provenance_is_reversible():
+    import base64
+    from app.services.job_normalize import normalize_row
+
+    original = "Python\x00and PostgreSQL; literal \\u0000 remains literal."
+    normalized = normalize_row(job_row(description=original))
+    assert "\x00" not in normalized.description
+    assert "Python and PostgreSQL" in normalized.description
+    raw = normalized.raw_payload["description"]
+    assert raw["encoding"] == "utf8-base64"
+    assert base64.b64decode(raw["data"]).decode("utf-8") == original
+    assert normalized.content_hash == normalize_row(job_row(description=original)).content_hash
 
 
 async def test_ingestion_does_not_touch_profile_or_resume_tables(

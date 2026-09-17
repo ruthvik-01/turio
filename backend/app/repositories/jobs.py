@@ -4,8 +4,14 @@ from uuid import UUID, uuid4
 
 from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import load_only
 
 from app.models.job import Job, JobSource
+from app.core.time import utcnow
+
+
+def eligible():
+    return Job.application_deadline.is_(None) | (Job.application_deadline >= utcnow())
 
 
 async def get_or_create_source(
@@ -34,13 +40,14 @@ async def existing_hashes(
     return {external_id: (job_id, digest) for external_id, job_id, digest in result.all()}
 
 
-async def insert_many(session: AsyncSession, source_id: UUID, rows: list[dict]) -> None:
+async def insert_many(
+    session: AsyncSession, source_id: UUID, rows: list[dict]
+) -> dict[str, tuple[UUID, str]]:
     if not rows:
-        return
-    await session.execute(
-        insert(Job),
-        [{"id": uuid4(), "source_id": source_id, **row} for row in rows],
-    )
+        return {}
+    values = [{"id": uuid4(), "source_id": source_id, **row} for row in rows]
+    await session.execute(insert(Job), values)
+    return {row["external_id"]: (row["id"], row["content_hash"]) for row in values}
 
 
 async def update_one(session: AsyncSession, job_id: UUID, values: dict) -> None:
@@ -54,6 +61,24 @@ async def get_by_id(session: AsyncSession, job_id: UUID) -> Job | None:
 async def count(session: AsyncSession) -> int:
     result = await session.execute(select(func.count()).select_from(Job))
     return int(result.scalar_one())
+
+
+async def matching_jobs(session: AsyncSession) -> list[Job]:
+    """Normalized inventory only; avoid fetching the large raw CSV payload."""
+    result = await session.execute(select(Job).options(load_only(
+        Job.id, Job.external_id, Job.title, Job.company, Job.description, Job.location,
+        Job.job_url, Job.application_url, Job.ats, Job.required_skills, Job.required_education,
+        Job.experience_requirement, Job.content_hash, Job.fetched_at,
+        Job.application_deadline, Job.company_logo_url,
+    )).where(eligible()).order_by(Job.id))
+    return list(result.scalars().all())
+
+
+async def inventory_fingerprint(session: AsyncSession) -> str:
+    from app.ml.scoring import digest
+
+    rows = (await session.execute(select(Job.id, Job.content_hash).where(eligible()).order_by(Job.id))).all()
+    return digest([(str(row.id), row.content_hash) for row in rows])
 
 
 async def list_jobs(
@@ -70,7 +95,7 @@ async def list_jobs(
     statement = select(Job)
     counter = select(func.count()).select_from(Job)
 
-    filters = []
+    filters = [eligible()]
     if query:
         pattern = f"%{query.lower()}%"
         filters.append(
@@ -87,7 +112,7 @@ async def list_jobs(
         statement = statement.where(condition)
         counter = counter.where(condition)
 
-    statement = statement.order_by(Job.company, Job.title).limit(limit).offset(offset)
+    statement = statement.order_by(Job.company, Job.title, Job.id).limit(limit).offset(offset)
 
     rows = (await session.execute(statement)).scalars().all()
     total = int((await session.execute(counter)).scalar_one())

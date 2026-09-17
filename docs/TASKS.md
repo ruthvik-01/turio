@@ -28,23 +28,23 @@ Implementation must follow `PHASE_PLAN.md` gates and `PROGRESS.md` next-task poi
 
 ## Sprint 2 — Dataset/Jobs
 
-- [ ] Stapply import
-- [ ] Schema validation
-- [ ] Job normalization
-- [ ] Deduplication
-- [ ] Job storage
-- [ ] Search API
-- [ ] Job list UI
+- [x] Stapply import
+- [x] Schema validation
+- [x] Job normalization
+- [x] Deduplication
+- [x] Job storage
+- [x] Search API
+- [x] Job list UI
 
 ## Sprint 3 — Matching
 
-- [ ] Keyword baseline
-- [ ] TF-IDF baseline
-- [ ] SBERT embeddings
-- [ ] Structured scoring
-- [ ] Ranking
-- [ ] Explanation evidence
-- [ ] Recommendation UI
+- [x] Keyword baseline
+- [x] TF-IDF baseline
+- [x] SBERT embeddings
+- [x] Structured scoring
+- [x] Ranking
+- [x] Explanation evidence
+- [x] Recommendation UI
 
 ## Sprint 4 — Application intelligence
 

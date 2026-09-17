@@ -104,6 +104,24 @@ Selected job
 
 ## 4. Reliability boundaries
 
+Implementation continuation (ADR-028–030): matching and application preparation
+are explicit operations with persisted results and bounded browser execution.
+Model inference is offloaded from the event loop. Match/cache storage reuses
+PostgreSQL JSONB; no vector service is assumed. A distributed worker and its
+deployment verification remain separate acceptance work, not implied by these APIs.
+
+Database ingestion and matching now also have the durable queue path in ADR-034:
+API enqueue -> persisted `agent_runs` -> atomic worker claim -> lease/checkpoint
+fenced service execution -> persisted result. Expired work is interrupted rather
+than replayed. The UI observes run status; old direct APIs remain compatible.
+Browser submission is structurally excluded from this queue.
+
+The locally verified v2 native browser path (ADR-033) isolates the browser context,
+binds the reviewed form destination/control schema, verifies the original resume
+and checks the outgoing native POST against a single-use permit. It does not
+delegate submission authority to a free-form LLM. Custom/live ATS transports and
+browser-operation recovery remain separate work.
+
 Use asynchronous/background execution for:
 
 - large job ingestion,

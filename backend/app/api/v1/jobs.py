@@ -9,9 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUserId
 from app.core.db import get_session
 from app.schemas.envelope import Envelope, envelope
-from app.schemas.job import JobData, JobPage, JobRefreshResult
+from app.schemas.job import CompanySuggestions, JobData, JobPage, JobRefreshResult
 from app.services import job_ingestion
 from app.services import jobs as job_service
+from app.services import rate_limits
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -45,6 +46,15 @@ async def list_jobs(
     return envelope(page)
 
 
+@router.get("/companies", response_model=Envelope[CompanySuggestions], summary="Search the company discovery catalog")
+async def company_suggestions(
+    user_id: CurrentUserId,
+    q: Annotated[str, Query(max_length=255)] = "",
+    limit: Annotated[int, Query(ge=1, le=50)] = 20,
+) -> Envelope[CompanySuggestions]:
+    return envelope(await job_service.company_suggestions(q, limit))
+
+
 @router.get(
     "/{job_id}",
     response_model=Envelope[JobData],
@@ -76,5 +86,6 @@ async def refresh_jobs(
     Re-running over unchanged data is a no-op: `inserted` and `updated` come
     back as zero.
     """
+    await rate_limits.work(session, user_id)
     summary = await job_ingestion.ingest_dataset(session)
     return envelope(job_service.to_refresh_result(summary))

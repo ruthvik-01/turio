@@ -1,0 +1,15 @@
+{
+  "version": "ranking-v1-provisional",
+  "representation_version": "compact-v1",
+  "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "model_revision": "c9745ed1d9f207416be6d2e6f8de32d1f16199bf",
+  "batch_size": 32,
+  "weights": {
+    "semantic": 0.45,
+    "skill": 0.25,
+    "experience": 0.10,
+    "education": 0.05,
+    "location": 0.05,
+    "preference": 0.10
+  }
+}

@@ -77,6 +77,22 @@ tests/adapters/ashby/
 
 ## 4. Evaluation scripts
 
+Application UI verification has two separate evidence levels:
+
+- `scripts/verify_application_ui_contract.py`: run against an existing loopback
+  frontend. All API responses are intercepted; no real account, file upload or
+  employer request occurs. This checks rendering and user-interaction safeguards,
+  not backend integration.
+- `scripts/smoke_ui.py --application-fixture`: requires the disposable UI backend
+  (`TURIO_UI_TEST=1`, `TURIO_UI_APPLICATION_FIXTURE=1`) and a separate frontend
+  pointing to it. Its fixture sentinel rejects normal deployments before signup.
+  This exercises the real UI/proxy/API/storage path with a no-network adapter.
+  The `application-ui` CI job configures this environment and preserves logs.
+
+Neither test establishes real-company automation support or matching quality.
+The CI job's existence is not evidence that it ran. Human evaluation remains
+separate and the quarantined synthetic intake must not be frozen/evaluated.
+
 Evaluation is separate from normal application tests:
 
 ```text

@@ -12,6 +12,9 @@ venv/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.model-cache/
+.verification/
+.runtime/
 
 # Node / Next.js
 node_modules/
@@ -29,6 +32,7 @@ data/*
 !data/.gitkeep
 experiments/*
 !experiments/.gitkeep
+!experiments/README.md
 *.zip
 
 # OS / editor

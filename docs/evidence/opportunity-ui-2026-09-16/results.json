@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Generic-MIME PDF accepted through UI/proxy, processed and stored in the real stack",
+    "Actual source-backed 0x logo loads in the existing company-icon slot",
+    "About this opportunity renders the API's stored-description presentation without emphasis spam",
+    "Job \u2192 application preparation selects the already stored resume without another upload",
+    "Apply with Agent reaches the existing start endpoint; disabled automation fails visibly without submission",
+    "Intercepted UI contract: stored resume \u2192 final review \u2192 explicit checkbox \u2192 one approved action; no real submission",
+    "390px job layout remains within the viewport",
+    "Logout clears session cookies"
+  ],
+  "page_errors": [],
+  "employer_submissions": 0,
+  "scope": "Local PostgreSQL/MinIO stack; approval UI actions intercepted; synthetic verification account"
+}

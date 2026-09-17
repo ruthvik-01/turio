@@ -71,14 +71,13 @@ class ObjectStorage:
         self._bucket_checked = True
 
     async def put(self, key: str, data: bytes, content_type: str) -> None:
-        await self._ensure_bucket()
-
         def _put() -> None:
             self._client.put_object(
                 Bucket=self._bucket, Key=key, Body=data, ContentType=content_type
             )
 
         try:
+            await self._ensure_bucket()
             await asyncio.to_thread(_put)
         except (BotoCoreError, ClientError) as exc:
             logger.error(
@@ -90,3 +89,16 @@ class ObjectStorage:
                 "The uploaded file could not be stored.",
                 503,
             ) from exc
+
+    async def get(self, key: str) -> bytes:
+        def _get() -> bytes:
+            response = self._client.get_object(Bucket=self._bucket, Key=key)
+            try:
+                return response["Body"].read()
+            finally:
+                response["Body"].close()
+
+        try:
+            return await asyncio.to_thread(_get)
+        except (BotoCoreError, ClientError) as exc:
+            raise AppError("OBJECT_STORAGE_UNAVAILABLE", "The stored resume could not be read.", 503) from exc

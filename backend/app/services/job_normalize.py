@@ -12,6 +12,7 @@ stays null rather than being parsed out of prose.
 """
 
 import hashlib
+import base64
 import json
 import re
 from dataclasses import dataclass
@@ -19,6 +20,7 @@ from datetime import datetime
 from typing import Any, Mapping
 
 from app.services.skills import extract_skills
+from app.services.job_metadata import deadline, logo_url, source_metadata
 
 # The CSV header, in order. Anything not in here is left in raw_payload.
 CSV_FIELDS: tuple[str, ...] = (
@@ -63,6 +65,8 @@ _HASHED_FIELDS = (
     "required_education",
     "experience_requirement",
     "raw_payload",
+    "application_deadline",
+    "company_logo_url",
 )
 
 _HORIZONTAL_WHITESPACE = re.compile(r"[ \t ]+")
@@ -73,7 +77,7 @@ def clean(value: Any) -> str | None:
     """Trim, strip residual markup, and treat blank as absent."""
     if value is None:
         return None
-    text = _HTML_TAG.sub(" ", str(value))
+    text = _HTML_TAG.sub(" ", str(value).replace("\x00", " "))
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = _HORIZONTAL_WHITESPACE.sub(" ", text)
     text = text.strip()
@@ -114,6 +118,8 @@ class NormalizedJob:
     experience_requirement: dict[str, Any] | None
     raw_payload: dict[str, Any]
     content_hash: str
+    application_deadline: datetime | None = None
+    company_logo_url: str | None = None
 
 
 def content_hash(job: NormalizedJob) -> str:
@@ -137,6 +143,19 @@ def normalize_row(row: Mapping[str, Any]) -> NormalizedJob | None:
     description = clean(row.get("description"))
     required_skills = extract_skills(f"{title}\n{description or ''}")
 
+    raw_payload = {}
+    for field in row:
+        if field is None:
+            continue
+        value = row[field]
+        # CSV values are strings/None. A tagged object preserves exceptional
+        # bytes without PostgreSQL's text/JSONB NUL restriction or ambiguity
+        # with an original literal "\\u0000" sequence.
+        raw_payload[field] = (
+            {"encoding": "utf8-base64", "data": base64.b64encode(value.encode("utf-8")).decode("ascii")}
+            if isinstance(value, str) and "\x00" in value else value
+        )
+    metadata = source_metadata(row)
     job = NormalizedJob(
         external_id=external_id,
         title=title,
@@ -153,7 +172,9 @@ def normalize_row(row: Mapping[str, Any]) -> NormalizedJob | None:
         # Likewise: the CSV has no structured years field. The schema document
         # notes that prose like "3+ years" stays null even in the source model.
         experience_requirement=None,
-        raw_payload={field: row.get(field) for field in CSV_FIELDS if field in row},
+        raw_payload=raw_payload,
         content_hash="",
+        application_deadline=deadline(metadata.get("application_deadline") or metadata.get("validThrough")),
+        company_logo_url=logo_url(metadata.get("company_logo_url") or metadata.get("logo_url")),
     )
     return NormalizedJob(**{**job.__dict__, "content_hash": content_hash(job)})

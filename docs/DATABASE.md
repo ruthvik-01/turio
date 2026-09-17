@@ -337,3 +337,42 @@ Treat the following as restricted:
 - refresh token hashes.
 
 Do not log raw sensitive values.
+
+## 8. Current implementation extensions (2026-09-15)
+
+The schema list above includes final-project targets, not only implemented tables.
+Revisions `d68b174af012` and `f720ce0143a9` implement:
+
+- `embeddings`: content-addressed cache key/vector, creation time, nullable candidate-owner FK for deletion isolation.
+- `job_matches`: method, model/revision, profile version, job/content and inventory hashes, config identity, final score and JSON evidence; unique per user/job/method.
+- `applications`: selected resume FK, revision/profile version, inspected form schema, review snapshot/token/time and explicit submission method in addition to lifecycle/tracking fields.
+- `application_fields`: normalized fields and option/locator metadata.
+- `application_answers`: one typed JSON scalar value/source/confirmation per field. The current model does not implement the proposed confidence/timestamp columns.
+- `saved_answers`: explicit opt-in, user-scoped reuse keyed by normalized question/type/options.
+- `application_events`: state evidence without raw answer values.
+- `idempotency_records`: user/scoped-key hash, request digest, committed private response snapshot and time.
+
+`evaluation_annotations` remains planned. Application request serialization uses
+row locks on PostgreSQL; SQLite tests do not establish its production concurrency
+behavior. Offline DDL generation passed; real migration execution is open.
+
+Revision `b491ef087a52` implements `agent_runs` for database work only:
+- owner FK, run type, normalized payload/request digest and resource key;
+- state, result, sanitized error, creation/start/finish times;
+- worker ID, unique claim token, lease deadline and heartbeat time;
+- a partial unique index allowing only one queued/running run per resource;
+- database checks excluding browser/submission types.
+
+Run request aliases reuse `idempotency_records`, storing a run ID rather than
+duplicating the operation. The earlier proposed application-linked agent-run
+fields are not implemented by this database-only queue.
+
+
+## Source-backed opportunity metadata — 2026-09-16
+
+Migration `a230916001` follows `f192dea57304`: nullable indexed
+`jobs.application_deadline` (timezone-aware timestamp), and nullable
+`jobs.company_logo_url` (text). Existing rows remain null until source-backed
+re-ingestion. No posting-date-derived expiry or invented logo is backfilled.
+Raw source fields remain preserved and metadata changes participate in content
+hashes. Decision: [[ADR#ADR-037 — Source-backed opportunity metadata and inventory expansion]].

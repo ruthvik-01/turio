@@ -1,6 +1,5 @@
-# Phase 2 brings up postgres + object-storage + backend + frontend.
-# DEPLOYMENT.md section 1 lists five services as the end state; `worker` is
-# first needed in Phase 3 (ingestion) and is still absent.
+# PostgreSQL + object storage + API + database worker + frontend.
+# Optional native-browser automation is not dispatched by the database worker.
 #
 # No `version:` key - it is obsolete in Compose v2.
 #
@@ -11,6 +10,7 @@
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-turio}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-replace_me}
@@ -27,12 +27,16 @@ services:
       start_period: 5s
 
   backend:
-    build:
+    restart: unless-stopped
+    build: &backend-build
       # Repository root: the image needs alembic/ and alembic.ini, which
       # SYSTEM_DESIGN.md section 6 places beside backend/ rather than inside it.
       context: .
       dockerfile: backend/Dockerfile
-    environment:
+      args:
+        INSTALL_ML: ${INSTALL_ML:-false}
+        INSTALL_BROWSER: ${INSTALL_BROWSER:-false}
+    environment: &backend-environment
       APP_ENV: ${APP_ENV:-development}
       APP_VERSION: ${APP_VERSION:-0.1.0}
       DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://turio:replace_me@postgres:5432/turio}
@@ -49,11 +53,19 @@ services:
       # Stapply slice, mounted read-only below. Absent is survivable: the file
       # is only read by POST /jobs/refresh, which reports it as unavailable.
       JOB_DATASET_PATH: ${JOB_DATASET_PATH:-data/ashby-jobs.csv}
+      MODEL_CACHE_PATH: /app/.model-cache
+      MODEL_LOCAL_FILES_ONLY: "true"
+      BROWSER_AUTOMATION_ENABLED: ${BROWSER_AUTOMATION_ENABLED:-false}
+      BROWSER_HEADLESS: ${BROWSER_HEADLESS:-true}
+      ANONYMIZED_TELEMETRY: "false"
+      WORKER_POLL_SECONDS: ${WORKER_POLL_SECONDS:-1}
+      WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-60}
     ports:
       - "8000:8000"
-    volumes:
+    volumes: &backend-volumes
       # Read-only: ingestion reads the dataset, nothing writes to it.
       - ./data:/app/data:ro
+      - ./backend/.model-cache:/app/.model-cache:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,7 +91,18 @@ services:
       retries: 5
       start_period: 20s
 
+  worker:
+    build: *backend-build
+    environment: *backend-environment
+    volumes: *backend-volumes
+    command: python -m app.workers.main
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+
   object-storage:
+    restart: unless-stopped
     # MinIO is no longer published on Docker Hub; quay.io is its registry.
     image: quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z
     command: server /data --console-address ":9001"
@@ -100,6 +123,7 @@ services:
       start_period: 5s
 
   frontend:
+    restart: unless-stopped
     build:
       context: ./frontend
       args:

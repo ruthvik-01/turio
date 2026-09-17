@@ -14,6 +14,7 @@ from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging
 from app.core.middleware import RequestIdMiddleware
 from app.core.storage import ObjectStorage
+from app.core.body_limit import BodyLimitMiddleware
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if settings.is_development else None,
     )
 
+    app.add_middleware(BodyLimitMiddleware, max_bytes=settings.max_request_bytes)
     app.add_middleware(RequestIdMiddleware)
     app.add_middleware(
         CORSMiddleware,
@@ -64,7 +66,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
-        expose_headers=["X-Request-ID"],
+        expose_headers=["X-Request-ID", "Retry-After"],
     )
 
     register_error_handlers(app)

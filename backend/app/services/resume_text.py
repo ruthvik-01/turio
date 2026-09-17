@@ -41,13 +41,22 @@ def extract_text(data: bytes, mime_type: str) -> str:
 
     try:
         reader = PdfReader(io.BytesIO(data))
+        if len(reader.pages) > 30:
+            raise AppError("INVALID_RESUME", "Resumes must contain at most 30 pages.", 413)
         if reader.is_encrypted and not reader.decrypt(""):
             raise AppError(
                 "INVALID_RESUME",
                 "The PDF is password-protected.",
                 415,
             )
-        pages = [page.extract_text() or "" for page in reader.pages]
+        pages = []
+        total = 0
+        for page in reader.pages:
+            text = page.extract_text() or ""
+            total += len(text)
+            if total > 200000:
+                raise AppError("INVALID_RESUME", "The extracted resume text is too large.", 413)
+            pages.append(text)
     except AppError:
         raise
     except (PdfReadError, OSError, ValueError, TypeError, KeyError) as exc:

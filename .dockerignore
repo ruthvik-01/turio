@@ -12,6 +12,13 @@ node_modules/
 **/.pytest_cache/
 **/.mypy_cache/
 **/.ruff_cache/
+**/.model-cache/
+.verification/
+.runtime/
+data/
+experiments/
+.playwright-mcp/
+frontend inspo/
 .env
 .env.*
 !.env.example

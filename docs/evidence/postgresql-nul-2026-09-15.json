@@ -1,0 +1,7 @@
+{
+  "project": "turio-verify-20260915-da0d3b",
+  "source_data_row": 12980,
+  "postgresql_storage": true,
+  "normalized_text_has_no_nul": true,
+  "raw_provenance_roundtrip": true
+}

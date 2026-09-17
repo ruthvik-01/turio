@@ -9,8 +9,13 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 
 # Requirements first so the dependency layer survives application code edits.
-COPY backend/requirements.txt ./
+COPY backend/requirements.txt backend/requirements-ml.txt backend/requirements-browser.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
+
+ARG INSTALL_ML=false
+ARG INSTALL_BROWSER=false
+RUN if [ "$INSTALL_ML" = "true" ]; then pip install --no-cache-dir -r requirements.txt -r requirements-ml.txt; fi
+RUN if [ "$INSTALL_BROWSER" = "true" ]; then pip install --no-cache-dir -r requirements.txt -r requirements-browser.txt && python -m playwright install --with-deps chromium; fi
 
 # Mirrors the repository layout so `prepend_sys_path = . backend` resolves in
 # both the container and a local checkout.

@@ -1,75 +1,19 @@
-"use client";
+import Link from "next/link";
+import { GrowthArt } from "@/components/growth-art";
 
-import { useEffect, useState } from "react";
-
-import { fetchHealth, type ApiEnvelope, type HealthData } from "@/lib/api";
-
-type HealthState =
-  | { kind: "loading" }
-  | { kind: "loaded"; envelope: ApiEnvelope<HealthData> }
-  | { kind: "failed"; message: string };
-
-/**
- * Phase 0 diagnostic shell.
- *
- * Not a product screen: it exists so the phase exit checklist can prove the
- * frontend boots and reaches the API from the browser. Real screens, layout
- * and visual direction are Phase 1+ work owned by FRONTEND.md.
- */
-export default function HomePage() {
-  const [state, setState] = useState<HealthState>({ kind: "loading" });
-
-  useEffect(() => {
-    let cancelled = false;
-
-    fetchHealth()
-      .then((envelope) => {
-        if (!cancelled) {
-          setState({ kind: "loaded", envelope });
-        }
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setState({
-            kind: "failed",
-            message: error instanceof Error ? error.message : String(error),
-          });
-        }
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  return (
-    <main className="mx-auto max-w-xl p-8">
-      <h1 className="text-xl font-semibold">Turio</h1>
-      <p className="mt-1 text-sm text-neutral-500">Phase 0 foundations shell</p>
-
-      <section className="mt-6 rounded border border-neutral-300 p-4 text-sm">
-        <h2 className="font-medium">Backend health</h2>
-        {state.kind === "loading" && <p className="mt-2 text-neutral-500">Checking...</p>}
-        {state.kind === "failed" && <p className="mt-2 text-red-700">{state.message}</p>}
-        {state.kind === "loaded" && (
-          <dl className="mt-2 space-y-1">
-            <Row label="status" value={state.envelope.data?.status ?? "-"} />
-            <Row label="database" value={state.envelope.data?.database ?? "-"} />
-            <Row label="version" value={state.envelope.data?.version ?? "-"} />
-            <Row label="error" value={state.envelope.error?.code ?? "none"} />
-            <Row label="request_id" value={state.envelope.request_id ?? "-"} />
-          </dl>
-        )}
-      </section>
-    </main>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex gap-3">
-      <dt className="w-28 shrink-0 text-neutral-500">{label}</dt>
-      <dd className="font-mono break-all">{value}</dd>
-    </div>
-  );
+export default function Landing() {
+  return <main className="container landing">
+    <section className="landing-hero"><div><p className="eyebrow">A more thoughtful job search</p><h1>Your next chapter.<br /><em>A little closer.</em></h1>
+      <p className="hero-copy">Bring your experience. Find opportunities that fit. Keep every application in one calm, organized space.</p>
+      <div className="actions"><Link className="button primary" href="/signup">Find your next step <span aria-hidden>↗</span></Link><Link className="button secondary" href="/login">I already have an account</Link></div>
+      <p className="small muted hero-footnote">Your profile stays yours. You decide when to apply.</p></div><GrowthArt />
+    </section>
+    <section className="journey" aria-labelledby="journey-title"><div><p className="eyebrow">Less repetition. More intention.</p><h2 id="journey-title">Make space for what’s next.</h2></div>
+      <div className="three-column">{[
+        ["01", "Start with your story", "Upload a PDF resume, review the extracted details, and build a profile you can keep using."],
+        ["02", "Find a considered fit", "Explore the job inventory and compare recommendations with visible evidence—not hidden promises."],
+        ["03", "Move at your pace", "Prepare your answers, review every detail, and track what happens next. Submission is always your decision."],
+      ].map(([number, title, copy]) => <article className="step-card" key={number}><span>{number}</span><h3>{title}</h3><p>{copy}</p></article>)}</div>
+    </section>
+  </main>;
 }

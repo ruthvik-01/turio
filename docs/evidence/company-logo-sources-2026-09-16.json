@@ -1,0 +1,38 @@
+{
+  "0g": {
+    "source_url": "https://jobs.ashbyhq.com/0g",
+    "logo_url": "https://app.ashbyhq.com/api/images/org-theme-wordmark/1fd9ac73-6ea1-4b9c-8a72-927948303501/b904752d-80cb-4adc-ac5d-937f2c7a550f/34253d3e-961a-4769-a62c-ff0dc49a407d.png",
+    "observed_at": "2026-09-16",
+    "company": "0g Labs"
+  },
+  "1password": {
+    "source_url": "https://jobs.ashbyhq.com/1password",
+    "logo_url": "https://app.ashbyhq.com/api/images/org-theme-wordmark/b8833a99-53c9-4b1c-9e2d-dd2b7952c640/bd5cff34-571d-4e8b-bf53-7f9bcef57d29/25bf033f-65e0-4cab-a519-58bfda79d984.png",
+    "observed_at": "2026-09-16",
+    "company": "1Password"
+  },
+  "0x": {
+    "source_url": "https://jobs.ashbyhq.com/0x",
+    "logo_url": "https://app.ashbyhq.com/api/images/org-theme-logo/7be65788-a243-424c-98ae-f219ad93d1c9/60fbdcfb-f310-46f4-afd2-ac87a850948f/25329fa0-9b6c-4bc2-a4d8-8b0c5bdaf9ca.png",
+    "observed_at": "2026-09-16",
+    "company": "0x"
+  },
+  "supabase": {
+    "source_url": "https://jobs.ashbyhq.com/supabase",
+    "logo_url": "https://app.ashbyhq.com/api/images/org-theme-wordmark/7e5b88a8-0d79-4402-9ab8-3b8efa158966/524a0a49-dcc6-42e9-88a4-07178ef53946/4452fc87-d3a3-4540-9ab1-4613ae983027.png",
+    "observed_at": "2026-09-16",
+    "company": "Supabase"
+  },
+  "linear": {
+    "source_url": "https://jobs.ashbyhq.com/linear",
+    "logo_url": "https://app.ashbyhq.com/api/images/org-theme-wordmark/3287cc87-df80-4a67-ab05-1a50f6dec2bc/6f220629-4c89-45dd-8390-2064b32f25d0/d0603617-186a-4b5c-b533-a826bf01e45e.png",
+    "observed_at": "2026-09-16",
+    "company": "Linear"
+  },
+  "notion": {
+    "source_url": "https://jobs.ashbyhq.com/notion",
+    "logo_url": "https://app.ashbyhq.com/api/images/org-theme-wordmark/0ac11447-a862-468b-95a0-40198c971382/9c301a0c-e540-490d-87bc-278619b8eaf2/ccfe1af7-26ca-4359-b300-2fafaa9a4dc6.png",
+    "observed_at": "2026-09-16",
+    "company": "Notion"
+  }
+}

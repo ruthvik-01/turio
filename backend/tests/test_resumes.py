@@ -11,6 +11,20 @@ from support import RESUME_TEXT, auth_headers, upload_resume
 PDF = "application/pdf"
 
 
+async def test_pdf_with_generic_browser_mime_is_validated_and_reused(client, make_pdf, storage):
+    headers = await auth_headers(client)
+    original = make_pdf(RESUME_TEXT)
+    uploaded = await upload_resume(client, headers, original, content_type="application/octet-stream")
+    assert uploaded.status_code == 201, uploaded.text
+    assert uploaded.json()["data"]["resume"]["mime_type"] == PDF
+    again = await upload_resume(client, headers, original)
+    assert again.status_code == 200
+    assert again.json()["data"]["resume"]["id"] == uploaded.json()["data"]["resume"]["id"]
+    assert len(storage.put_calls) == 1
+    invalid = await upload_resume(client, headers, b"not a PDF", content_type="application/octet-stream")
+    assert invalid.status_code == 415
+
+
 async def test_upload_extracts_the_profile(
     client: AsyncClient, make_pdf: Callable[[str], bytes]
 ) -> None:

@@ -11,6 +11,7 @@ was last *observed to change* rather than when the file was last read.
 """
 
 import csv
+import asyncio
 import logging
 import sys
 from dataclasses import dataclass
@@ -59,6 +60,8 @@ def _values(job: NormalizedJob) -> dict:
         "job_url": job.job_url,
         "application_url": job.application_url,
         "ats": job.ats,
+        "application_deadline": job.application_deadline,
+        "company_logo_url": job.company_logo_url,
         "required_skills": job.required_skills,
         "required_education": job.required_education,
         "experience_requirement": job.experience_requirement,
@@ -68,7 +71,7 @@ def _values(job: NormalizedJob) -> dict:
     }
 
 
-async def ingest_dataset(session: AsyncSession, *, path: str | None = None) -> IngestSummary:
+async def ingest_dataset(session: AsyncSession, *, path: str | None = None, checkpoint=None) -> IngestSummary:
     settings = get_settings()
     dataset_path = Path(path or settings.job_dataset_path)
 
@@ -83,7 +86,6 @@ async def ingest_dataset(session: AsyncSession, *, path: str | None = None) -> I
         session, name=SOURCE_NAME, source_type=SOURCE_TYPE, base_url=SOURCE_BASE_URL
     )
     known = await job_repo.existing_hashes(session, source.id)
-
     summary = IngestSummary()
     pending: list[dict] = []
     # external_id -> index in `pending`. Guards the unique constraint against a
@@ -95,7 +97,10 @@ async def ingest_dataset(session: AsyncSession, *, path: str | None = None) -> I
     with dataset_path.open("r", encoding="utf-8", newline="") as handle:
         for row in csv.DictReader(handle):
             summary.rows_read += 1
-            job = normalize_row(row)
+            # Normalization is synchronous, including for unchanged rows. Keep it
+            # off the event loop so lease renewal is not starved by CPU work.
+            # Only pure row processing crosses threads; the session stays here.
+            job = await asyncio.to_thread(normalize_row, row)
 
             if job is None:
                 # Lacks something the jobs table requires. Counted rather than
@@ -127,12 +132,16 @@ async def ingest_dataset(session: AsyncSession, *, path: str | None = None) -> I
                 summary.inserted += 1
             else:
                 await job_repo.update_one(session, previous[0], values)
+                known[job.external_id] = (previous[0], job.content_hash)
                 summary.updated += 1
 
             if len(pending) >= settings.job_ingest_batch_size:
-                await job_repo.insert_many(session, source.id, pending)
+                # Retain inserted identities after clearing the pending batch.
+                known.update(await job_repo.insert_many(session, source.id, pending))
                 pending = []
                 queued = {}
+                if checkpoint:
+                    await checkpoint()
                 await session.commit()
 
             if summary.rows_read % _PROGRESS_EVERY == 0:
@@ -149,6 +158,8 @@ async def ingest_dataset(session: AsyncSession, *, path: str | None = None) -> I
                 )
 
     await job_repo.insert_many(session, source.id, pending)
+    if checkpoint:
+        await checkpoint()
     await session.commit()
 
     logger.info(

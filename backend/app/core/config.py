@@ -1,8 +1,10 @@
 """Application settings, loaded once from the environment."""
 
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field, model_validator
 
 
 class Settings(BaseSettings):
@@ -34,6 +36,33 @@ class Settings(BaseSettings):
     job_dataset_path: str = "data/ashby-jobs.csv"
     # Rows per commit during ingestion. Bounds memory on a large slice.
     job_ingest_batch_size: int = 1000
+
+    ranking_config_path: str = str(Path(__file__).resolve().parents[1] / "ml" / "ranking.json")
+    model_cache_path: str = str(Path(__file__).resolve().parents[2] / ".model-cache")
+    model_local_files_only: bool = True
+    browser_automation_enabled: bool = False
+    browser_headless: bool = True
+    browser_executable_path: str | None = None
+    browser_timeout_seconds: int = 90
+    worker_poll_seconds: float = Field(default=1.0, ge=0.05, le=60)
+    worker_lease_seconds: int = Field(default=60, ge=15, le=3600)
+    rate_limits_enabled: bool = True
+    auth_ip_limit: int = Field(default=200, ge=1)
+    auth_account_limit: int = Field(default=10, ge=1)
+    work_user_limit: int = Field(default=30, ge=1)
+    rate_window_seconds: int = Field(default=60, ge=1, le=3600)
+    max_request_bytes: int = Field(default=6 * 1024 * 1024, ge=1024)
+
+    @model_validator(mode="after")
+    def validate_production_secrets(self):
+        if self.app_env == "production":
+            if len(self.secret_key) < 32 or any(part in self.secret_key.lower() for part in ("replace", "insecure", "test-only")):
+                raise ValueError("Production requires a strong explicitly configured SECRET_KEY.")
+            if "replace_me" in self.object_storage_secret_key or len(self.object_storage_secret_key) < 16:
+                raise ValueError("Production requires explicitly configured object-storage credentials.")
+            if not self.rate_limits_enabled:
+                raise ValueError("Rate limits must remain enabled in production.")
+        return self
 
     cors_origins: str = ""
 

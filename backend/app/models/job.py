@@ -42,6 +42,8 @@ class Job(Base):
     job_url: Mapped[str] = mapped_column(String(1024), nullable=False)
     application_url: Mapped[str | None] = mapped_column(String(1024), nullable=True)
     ats: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    application_deadline: Mapped[datetime | None] = mapped_column(UTCDateTime, nullable=True, index=True)
+    company_logo_url: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     required_skills: Mapped[list[str] | None] = mapped_column(JsonB, nullable=True)
     required_education: Mapped[list[str] | None] = mapped_column(JsonB, nullable=True)

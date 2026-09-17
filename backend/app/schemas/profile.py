@@ -2,8 +2,12 @@
 
 import uuid
 from datetime import date, datetime
+from typing import Annotated
 
 from pydantic import BaseModel, Field
+
+ShortText = Annotated[str, Field(max_length=255)]
+SkillName = Annotated[str, Field(min_length=1, max_length=128)]
 
 
 class SkillData(BaseModel):
@@ -12,25 +16,25 @@ class SkillData(BaseModel):
 
 
 class ExperienceData(BaseModel):
-    company: str | None = None
-    title: str | None = None
+    company: ShortText | None = None
+    title: ShortText | None = None
     start_date: date | None = None
     end_date: date | None = None
-    description: str | None = None
+    description: str | None = Field(default=None, max_length=10000)
 
 
 class EducationData(BaseModel):
-    institution: str | None = None
-    degree: str | None = None
-    field: str | None = None
+    institution: ShortText | None = None
+    degree: ShortText | None = None
+    field: ShortText | None = None
     start_date: date | None = None
     end_date: date | None = None
 
 
 class ProjectData(BaseModel):
-    name: str | None = None
-    description: str | None = None
-    technologies: list[str] = Field(default_factory=list)
+    name: ShortText | None = None
+    description: str | None = Field(default=None, max_length=10000)
+    technologies: list[SkillName] = Field(default_factory=list, max_length=100)
 
 
 class ProfileData(BaseModel):
@@ -62,17 +66,17 @@ class ProfileUpdateRequest(BaseModel):
     clears a field while omitting it leaves the stored value alone.
     """
 
-    full_name: str | None = None
-    phone: str | None = None
-    location: str | None = None
-    preferred_roles: list[str] | None = None
-    linkedin_url: str | None = None
-    github_url: str | None = None
-    portfolio_url: str | None = None
-    work_authorization_status: str | None = None
+    full_name: ShortText | None = None
+    phone: str | None = Field(default=None, max_length=64)
+    location: ShortText | None = None
+    preferred_roles: list[ShortText] | None = Field(default=None, max_length=20)
+    linkedin_url: str | None = Field(default=None, max_length=512)
+    github_url: str | None = Field(default=None, max_length=512)
+    portfolio_url: str | None = Field(default=None, max_length=512)
+    work_authorization_status: str | None = Field(default=None, max_length=128)
     sponsorship_required: bool | None = None
 
-    skills: list[str] | None = None
-    experiences: list[ExperienceData] | None = None
-    educations: list[EducationData] | None = None
-    projects: list[ProjectData] | None = None
+    skills: list[SkillName] | None = Field(default=None, max_length=200)
+    experiences: list[ExperienceData] | None = Field(default=None, max_length=50)
+    educations: list[EducationData] | None = Field(default=None, max_length=30)
+    projects: list[ProjectData] | None = Field(default=None, max_length=50)

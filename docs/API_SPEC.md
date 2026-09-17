@@ -182,13 +182,12 @@ counted rather than dropped silently.
 
 `503 JOB_SOURCE_UNAVAILABLE` when the dataset file is missing.
 
-**Execution model.** Section 4 says refresh should "normally" run
-asynchronously. It does not yet: this route is synchronous and the request lasts
-as long as the import, which for the full 55k-row Ashby slice is minutes.
-`DEPLOYMENT.md` section 4 puts ingestion on a background worker, which arrives
-with the worker container in a later phase. Until then, the initial bulk load is
-better done offline with `scripts/import_jobs.py`, which calls the same service
-function so the two paths cannot diverge.
+**Execution model.** This direct compatibility route remains synchronous.
+The frontend now requests `POST /runs` with `kind: "jobs_refresh"` and observes
+the durable worker result (section 13). The CLI importer still invokes the same
+ingestion service. Do not run independent synchronous/CLI imports concurrently
+with a queued refresh; queue resource deduplication covers queued work, not
+arbitrary out-of-band administrative imports.
 
 ## 5. Matching
 
@@ -278,6 +277,9 @@ DATABASE_UNAVAILABLE
 OBJECT_STORAGE_UNAVAILABLE
 NOT_FOUND
 INTERNAL_ERROR
+INVALID_REQUEST
+MODEL_UNAVAILABLE
+RUN_INTERRUPTED
 ```
 
 Do not introduce aliases such as `MISSING_PROFILE_FIELD` without an ADR and contract update.
@@ -293,3 +295,114 @@ All repository operations derive `user_id` from authenticated request context.
 Use `Idempotency-Key` for application creation and submission approval. The idempotency key must be associated with the authenticated user and operation scope.
 
 A replay of the same valid request must return the previously committed result rather than duplicate an application or submission event.
+
+## 12. Implemented continuation contracts (2026-09-15)
+
+- `POST /matches`: `{ "method": "keyword" | "tfidf" | "sbert" }`; defaults to the explicitly labeled keyword baseline. Returns a first page of results. SBERT unavailability returns `503 MODEL_UNAVAILABLE`, never a silent fallback.
+- `GET /matches`: `method`, `limit` (1–100), `offset`; includes `stale`. Stale profile/inventory/config results are withheld. Match detail returns `409 CONFLICT` when stale.
+- Match output contains job metadata, method/model revision, profile/config versions, final score and evidence. Unknown structured signals remain null and active weights are renormalized.
+- `POST /applications`: `{ "job_id": UUID, "resume_id": UUID? }`, required `Idempotency-Key`. Omitted resume selects the caller's latest stored resume, if any.
+- `GET /applications`: `status`, `outcome`, `limit`, `offset`, owner-scoped.
+- `GET /applications/summary`: owner-scoped counts plus 28 UTC dates/counts for the dashboard.
+- `POST /applications/{id}/start`: inspect and map through the optional adapter. Disabled/unsupported assistance fails explicitly. It never submits.
+- `POST /applications/{id}/answers`: `{ "answers": [{ "field_id": UUID, "value": string|boolean|null, "user_confirmed": boolean, "save_for_reuse": boolean }] }`, required `Idempotency-Key`. Profile-derived facts must be edited in the profile rather than overridden here.
+- `POST /applications/{id}/fields/{field_id}/draft`: factual, template-based starter for permitted narrative textareas. Always unconfirmed; sensitive questions are excluded.
+- `POST /applications/{id}/review`: fill/validate without submission and produce a review token bound to the schema, answers, resume, profile version and application revision.
+- `POST /applications/{id}/approve-submit`: `{ "approved": true, "review_token": string }`, required `Idempotency-Key`. Review expires after 15 minutes. Persisted submission intent precedes the external action; ambiguous outcomes are `verification_failed`, never automatically retried.
+- `PATCH /applications/{id}`: optional `notes`, `outcome`, `cancel`, `submitted_manually`. Manual submission is explicitly labeled `submission_method: "manual"`, not claimed as a browser-verified result.
+- Boundary validation returns `422 INVALID_REQUEST` with the standard envelope and without echoing submitted credential/answer values.
+
+The Next.js `/api/...` proxy preserves these APIs while keeping tokens in
+HTTP-only cookies. It requires same-origin mutations and HTTPS outside localhost.
+Existing direct routes remain compatible. The jobs UI now uses the durable
+database queue in section 13. Browser application operations remain request-driven.
+
+### Native browser verification update
+
+The v2 review snapshot includes native form action/method/encoding and control
+submission names. Previous v1 snapshots require re-preparation. The adapter
+rechecks authorization and values, validates original resume integrity, and
+allows only one body-matching POST. Unrelated, modified or duplicate requests do
+not establish success; uncertain attempts remain `verification_failed` and are
+not automatically retried. Corrupted stored resumes use the existing
+`OBJECT_STORAGE_UNAVAILABLE` boundary. Public route/request shapes are unchanged.
+This has local fixture evidence, not verified live-employer support.
+
+## 13. Durable database runs
+
+### POST `/api/v1/runs`
+
+Requires authentication and `Idempotency-Key`; returns `202` with an owned run.
+
+```json
+{"kind":"jobs_refresh"}
+```
+
+or:
+
+```json
+{"kind":"matches_refresh","method":"keyword"}
+```
+
+Matching methods remain `keyword`, `tfidf`, and `sbert`. Extra fields, file paths,
+code and browser/submission types are rejected. Inputs use the configured dataset
+and current profile/inventory/configuration at execution time.
+
+Reusing a request key returns the same run identity; a different body conflicts.
+Equivalent active work for the same owner/resource is reused and the new key is
+recorded as an alias. Another owner's active inventory refresh yields a generic
+conflict without exposing their run.
+
+### GET `/api/v1/runs`
+
+Owner-scoped list; optional `state`, `limit` (1–100), `offset`.
+
+### GET `/api/v1/runs/{run_id}`
+
+Returns `id`, `kind`, `state`, `result`, `error_code`, `error_message`, and lifecycle
+timestamps. Results are operation snapshots, not a promise that source data has
+not changed since completion.
+
+### POST `/api/v1/runs/{run_id}/cancel`
+
+Only queued work can be cancelled. Repeating cancellation is harmless. Running
+or completed work returns `409 CONFLICT` rather than pretending it was stopped.
+
+States: `queued`, `running`, `succeeded`, `failed`, `interrupted`, `cancelled`.
+Worker claim tokens, renewable leases and pre-commit checkpoints fence stale
+workers. Expired leases become `interrupted` with `RUN_INTERRUPTED`; some earlier
+committed batches may remain. There is no automatic replay. Explicit retry uses a
+new request key.
+
+Application preparation, review and final submission are not queue types.
+The existing explicit submission approval boundary is unchanged.
+
+
+## Opportunity maintenance — 2026-09-16
+
+Job responses add nullable `application_deadline` (UTC ISO timestamp) and
+`company_logo_url` (source-backed HTTPS URL). `description` is a deterministic
+readable presentation of stored text; matching still uses stored text.
+`GET /jobs` excludes expired deadlines before count/pagination; unknown deadlines
+retain existing eligibility. Expired job detail returns 404; new application
+creation/preparation returns 409. Historical application records are retained.
+Matching fingerprints include only eligible inventory, invalidating stale results
+when a deadline passes even without a content update.
+
+`POST /applications/{id}/start` is the **Apply with Agent** action, not submission.
+If the draft has no selected resume, preparation attaches the user's stored resume.
+An existing selection is not silently replaced. Explicit final review and approval
+remain separate. `.pdf` uploads with empty/generic binary MIME are accepted only
+with PDF magic bytes and successful existing parser validation.
+
+## Company discovery suggestions — 2026-09-16
+
+`GET /api/v1/jobs/companies?q=&limit=20` requires authentication. It searches
+canonical names/slugs across the existing discovery catalog, including companies
+without jobs. Returns `{companies: [{company, slug}], total}` in the normal envelope.
+Limit: 1–50; query: at most 255 characters. Catalog lives beside `JOB_DATASET_PATH`
+as `stapply-company-inventory.json`; missing/invalid input returns
+`COMPANY_CATALOG_UNAVAILABLE` (503). It does not search ATS metadata.
+
+Selection continues to use `GET /jobs?company=<canonical name>` combined with
+`q`, `location`, `ats`, `limit` and `offset`. Company and Platform are independent.

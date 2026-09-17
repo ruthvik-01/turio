@@ -17,6 +17,7 @@ os.environ.setdefault("OBJECT_STORAGE_SECRET_KEY", "test-secret-key")
 
 from collections.abc import AsyncIterator, Callable  # noqa: E402
 from pathlib import Path  # noqa: E402
+from uuid import uuid4  # noqa: E402
 
 import pytest  # noqa: E402
 from httpx import ASGITransport, AsyncClient  # noqa: E402
@@ -26,6 +27,8 @@ from sqlalchemy.ext.asyncio import (  # noqa: E402
     async_sessionmaker,
     create_async_engine,
 )
+from sqlalchemy.engine import make_url  # noqa: E402
+from sqlalchemy.schema import CreateSchema, DropSchema  # noqa: E402
 
 from app.api.deps import get_storage  # noqa: E402
 from app.core.db import get_session  # noqa: E402
@@ -48,6 +51,7 @@ class InMemoryStorage:
     def __init__(self) -> None:
         self.objects: dict[str, bytes] = {}
         self.put_calls: list[str] = []
+        self.get_calls: list[str] = []
         # Set by a test that needs to see how an object-storage outage surfaces.
         self.fail = False
 
@@ -58,6 +62,12 @@ class InMemoryStorage:
             )
         self.put_calls.append(key)
         self.objects[key] = data
+
+    async def get(self, key: str) -> bytes:
+        if self.fail:
+            raise AppError("OBJECT_STORAGE_UNAVAILABLE", "The stored resume could not be read.", 503)
+        self.get_calls.append(key)
+        return self.objects[key]
 
 
 def build_pdf(text: str) -> bytes:
@@ -161,6 +171,27 @@ async def database_engine(tmp_path: Path) -> AsyncIterator[AsyncEngine]:
     database. PostgreSQL is the deployment target; SQLite stands in here so
     that the suite runs without a container runtime.
     """
+    postgres = os.environ.get("TURIO_TEST_DATABASE_URL")
+    if postgres:
+        url = make_url(postgres)
+        if url.get_backend_name() != "postgresql" or not (url.database or "").startswith("turio_test_"):
+            raise RuntimeError("PostgreSQL tests require an explicitly named turio_test_ database.")
+        schema = "test_" + uuid4().hex
+        admin = create_async_engine(url)
+        async with admin.begin() as connection:
+            await connection.execute(CreateSchema(schema))
+        scoped = url.update_query_dict({"options": f"-csearch_path={schema}"})
+        engine = create_async_engine(scoped)
+        try:
+            async with engine.begin() as connection:
+                await connection.run_sync(Base.metadata.create_all)
+            yield engine
+        finally:
+            await engine.dispose()
+            async with admin.begin() as connection:
+                await connection.execute(DropSchema(schema, cascade=True))
+            await admin.dispose()
+        return
     url = f"sqlite+aiosqlite:///{(tmp_path / 'turio-test.db').as_posix()}"
     engine = create_async_engine(url)
     async with engine.begin() as connection:

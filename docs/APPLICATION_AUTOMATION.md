@@ -82,6 +82,18 @@ For work authorization, sponsorship, disability, demographic information, or oth
 
 The agent must stop before final submission until the user explicitly approves the reviewed application.
 
+### Visible browser mode
+
+`BROWSER_HEADLESS` defaults to `true`. Setting it to `false` passes headed mode
+to the existing Browser Use runtime. This does not enable automation or alter
+domain, resume-integrity, review or submission guards.
+
+Headed mode needs a usable desktop display on the **backend host**. It does not
+open the remote user's Chrome, and setting it false in a display-less Docker
+container is not a streaming solution. Keep the default in the current Docker
+stack. Configuration forwarding/cleanup has unit coverage; a real headed desktop
+session and live employer compatibility are not yet verified.
+
 ## 9. Failure handling
 
 Show and record:
@@ -104,3 +116,28 @@ Stop automation
 ```
 
 Never claim an application was submitted when it was not.
+
+## 11. Native-form verification boundary
+
+ADR-033 limits the next verification step to fully intercepted synthetic forms
+using the actual browser runtime. Production destinations remain restricted.
+Approval must cover the native form destination and values, including original
+resume bytes; unrelated requests and duplicate mutation attempts cannot establish
+success. JS-only/custom ATS transports remain unsupported until separately audited.
+Local fixture evidence is not per-company live support evidence.
+
+The implemented v2 native contract accepts explicit UTF-8 POST forms using
+native multipart or URL-encoded bodies. Named hidden fields, multiple inputs and
+custom widgets require a separate adapter. Missing optional answers are cleared,
+not silently inherited from page defaults. The action/controls are rechecked
+around authorization; actual text/file data is checked by a single-use request
+permit. Stored resume bytes must also match the upload checksum.
+
+Context page requests are sealed when candidate filling begins; only the approved
+matching POST may pass. Service workers/page WebSockets are blocked. Teardown
+closes the context/CDP connection, owned browser and driver.
+
+Local result: 130 full-suite passes, including 17 actual-browser fixtures and 14
+payload tests. See `evidence/phase6-local-verification-2026-09-15.md`. Arbitrary
+JSON transports, pre-submit RPC/uploads, CSRF fields, redirects and live Ashby
+pages have not been verified. Do not weaken the guard to make a live page pass.

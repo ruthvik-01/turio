@@ -1,0 +1,24 @@
+{
+  "scope": "Repeated synthetic/local vocabulary microbenchmark, not network or live-ATS latency",
+  "python": "3.13.2",
+  "iterations_per_sample": 500000,
+  "samples": 5,
+  "labels": 38,
+  "median_ns_per_call": {
+    "uncached": 962.7598,
+    "cached": 57.848
+  },
+  "median_cpu_ns_per_call": {
+    "uncached": 937.5,
+    "cached": 62.5
+  },
+  "cpu_timing_note": "Process CPU-clock medians are approximate; zero means below measurement granularity, not zero CPU use.",
+  "speedup": 16.642922832250036,
+  "output_equivalence": true,
+  "cache_entries": 38,
+  "cache_peak_bytes": 4477,
+  "source_sha256": "9f31150a3ee740a275c4545e83af48c6af9395c7b9f4e8ebc3c99995681c210a",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "bandwidth": "Not applicable: both measured functions execute locally without network I/O.",
+  "accuracy_scope": "Exact output equivalence on this fixed vocabulary only; not human relevance or live ATS accuracy."
+}

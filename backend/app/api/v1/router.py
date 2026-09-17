@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends
 
 from app.api.deps import require_user
-from app.api.v1 import auth, health, jobs, profiles, resumes
+from app.api.v1 import applications, auth, health, jobs, matches, profiles, resumes, runs
 
 api_router = APIRouter(prefix="/api/v1")
 
@@ -19,5 +19,8 @@ protected_router.include_router(auth.protected_router)
 protected_router.include_router(resumes.router)
 protected_router.include_router(profiles.router)
 protected_router.include_router(jobs.router)
+protected_router.include_router(matches.router)
+protected_router.include_router(applications.router)
+protected_router.include_router(runs.router)
 
 api_router.include_router(protected_router)

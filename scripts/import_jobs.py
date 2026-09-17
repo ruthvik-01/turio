@@ -20,6 +20,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
 
+# psycopg refuses to run async on Windows' default ProactorEventLoop:
+#   "Psycopg cannot use the 'ProactorEventLoop' to run in async mode."
+# The application never meets this because it runs inside a Linux container;
+# only this host-side script does.
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 from app.core.db import create_engine, create_session_factory  # noqa: E402
 from app.core.config import get_settings  # noqa: E402
 from app.services.job_ingestion import ingest_dataset  # noqa: E402
