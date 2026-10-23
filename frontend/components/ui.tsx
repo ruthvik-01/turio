@@ -1,10 +1,28 @@
 "use client";
-import Link from "next/link";
+import { ButtonLabel, TransitionLink as Link } from "./route-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import type { Job, Match } from "@/lib/types";
 import { useSession } from "./session";
+import { applyTheme, resolveTheme, type Theme } from "@/lib/theme";
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<Theme | null>(null);
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const sync = () => setTheme(resolveTheme(document.documentElement.dataset.theme, media.matches));
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+  return <button id="turio-theme-toggle" type="button" className="text-button theme-toggle"
+    aria-label="Dark theme" aria-pressed={theme === null ? undefined : theme === "dark"}
+    disabled={theme === null} onClick={() => {
+      const next = theme === "dark" ? "light" : "dark";
+      applyTheme(next); setTheme(next);
+    }}><span className="theme-indicator" aria-hidden="true" /></button>;
+}
 
 export function Header() {
   const path = usePathname();
@@ -15,14 +33,67 @@ export function Header() {
     try { await api("/auth/logout", { method: "POST", body: "{}" }); clearForLogout(); router.push("/"); }
     catch (error) { setError((error as Error).message); }
   }
-  return <><header className="site-header">
-    <Link href={user ? "/home" : "/"} className="brand" aria-label="Turio home"><img src="/brand/turio-logo.png" alt="Turio" /></Link>
-    {user && <nav aria-label="Main navigation">{[["/home", "Home"], ["/jobs", "Jobs"], ["/applications", "Applications"], ["/interviews", "Interviews"], ["/resources", "Resources"]].map(([href, text]) =>
+  const publicPage = path === "/" || path === "/login" || path === "/signup";
+  return <><header className={`site-header${publicPage ? " public-header" : ""}`}>
+    {publicPage && <ThemeToggle />}
+    <Link href={user ? "/home" : "/"} className="brand" aria-label="Turio home">Turio</Link>
+    {user && !publicPage && <nav aria-label="Main navigation">{[["/home", "Home"], ["/jobs", "Jobs"], ["/applications", "Applications"], ["/interviews", "Interviews"], ["/resources", "Resources"], ["/profile", "Profile"]].map(([href, text]) =>
       <Link key={href} href={href} aria-current={path.startsWith(href) ? "page" : undefined}>{text}</Link>)}</nav>}
-    <div className="header-actions">{user ? <><Link className="avatar" href="/profile" aria-label="Edit profile">{user.email[0].toUpperCase()}</Link><button className="text-button" onClick={logout}>Sign out</button></> :
-      <><Link className="text-button" href="/login">Sign in</Link><Link className="button primary small" href="/signup">Get started <span aria-hidden>↗</span></Link></>}</div>
+    <div className="header-actions">
+      {!publicPage && <ThemeToggle />}
+      {user ? (
+        <>
+          <Link className="avatar" href="/profile" aria-label="Edit profile">{user.email[0].toUpperCase()}</Link>
+          <button className="text-button" onClick={logout}>Sign out</button>
+        </>
+      ) : (
+        <Link className="text-button" href="/login">Sign in</Link>
+      )}
+    </div>
   </header>{error && <div className="container"><Notice kind="error">{error}</Notice></div>}</>;
 }
+export function LandingActions() {
+  const { user } = useSession();
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  return <>
+    <div className="actions">
+      <Link className="button primary" href={user ? "/home" : "/signup"}>{user ? "Open workspace" : "Get started"}</Link>
+      <button type="button" className="button secondary" onClick={() => setOpen(true)}><ButtonLabel>How it works</ButtonLabel></button>
+    </div>
+    {open && <div className="modal-backdrop" onClick={() => setOpen(false)} role="presentation">
+      <div className="modal-card panel" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <div className="modal-header">
+          <h2 id="modal-title">How Turio works</h2>
+          <button type="button" className="modal-close" onClick={() => setOpen(false)} aria-label="Close dialog">✕</button>
+        </div>
+        <div className="three-column modal-steps">
+          <article className="step-card">
+            <span>01</span>
+            <h3>Add your resume</h3>
+            <p>Upload a PDF, check the extracted details and save your profile for future applications.</p>
+          </article>
+          <article className="step-card">
+            <span>02</span>
+            <h3>Search jobs</h3>
+            <p>Browse the job inventory or compare recommendations with the skills and experience in your profile using SBERT.</p>
+          </article>
+          <article className="step-card">
+            <span>03</span>
+            <h3>Prepare an application</h3>
+            <p>Reuse your saved answers, review the form and track its status. Submission requires your explicit approval.</p>
+          </article>
+        </div>
+      </div>
+    </div>}
+  </>;
+}
+
 export function Workspace({ children }: { children: ReactNode }) {
   const { user, loading, loggingOut } = useSession();
   const router = useRouter();
@@ -47,8 +118,9 @@ export function CompanyLogo({ job }: { job: Job }) {
     ? <img src={url} alt={`${job.company} logo`} referrerPolicy="no-referrer" style={{ width: "100%", height: "100%", objectFit: "contain", borderRadius: "inherit" }} onError={() => setFailedUrl(url)} />
     : <svg aria-label="Company logo unavailable" role="img" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5 21V3h14v18M3 21h18M9 21v-4h6v4M8 7h2m4 0h2M8 11h2m4 0h2" /></svg>}</span>;
 }
-export function JobCard({ job, match }: { job: Job; match?: Match }) {
+export function JobCard({ job, match, selection }: { job: Job; match?: Match; selection?: ReactNode }) {
   return <article className="job-card panel"><div className="job-card-top"><CompanyLogo job={job} /><div><p className="company-name">{job.company}</p><span className="muted small">{job.location || "Location not specified"}</span></div>{match && <span className="match-score">{Math.round(match.final_score * 100)}<small>/100</small></span>}</div>
+    {selection}
     <h3><Link href={`/jobs/${job.id}${match ? `?match=${match.id}` : ""}`}>{job.title}</Link></h3>
     <div className="chips">{job.required_skills.slice(0, 4).map(skill => <Badge key={skill}>{skill}</Badge>)}</div>
     {match && <p className="small muted">{match.method === "sbert" ? "SBERT + structured signals" : `${match.method === "tfidf" ? "TF-IDF" : "Keyword"} baseline + structured signals`}</p>}

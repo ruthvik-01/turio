@@ -95,67 +95,72 @@ async def ingest_dataset(session: AsyncSession, *, path: str | None = None, chec
     queued: dict[str, int] = {}
 
     with dataset_path.open("r", encoding="utf-8", newline="") as handle:
-        for row in csv.DictReader(handle):
-            summary.rows_read += 1
+        reader = csv.DictReader(handle)
+        while True:
+            raw_chunk = [row for _, row in zip(range(500), reader)]
+            if not raw_chunk:
+                break
             # Normalization is synchronous, including for unchanged rows. Keep it
-            # off the event loop so lease renewal is not starved by CPU work.
-            # Only pure row processing crosses threads; the session stays here.
-            job = await asyncio.to_thread(normalize_row, row)
+            # off the event loop in bounded chunks so lease renewal stays responsive
+            # without paying per-row thread dispatch overhead on 56k rows.
+            normalized_chunk = await asyncio.to_thread(lambda rows: [normalize_row(r) for r in rows], raw_chunk)
+            for job in normalized_chunk:
+                summary.rows_read += 1
 
-            if job is None:
-                # Lacks something the jobs table requires. Counted rather than
-                # dropped silently; see the exit checklist note in PROGRESS.md.
-                summary.rejected += 1
-                continue
+                if job is None:
+                    # Lacks something the jobs table requires. Counted rather than
+                    # dropped silently; see the exit checklist note in PROGRESS.md.
+                    summary.rejected += 1
+                    continue
 
-            values = _values(job)
+                values = _values(job)
 
-            queued_at = queued.get(job.external_id)
-            if queued_at is not None:
-                # Duplicate within this run. Last occurrence wins, which is the
-                # same rule the update path applies across runs.
-                if pending[queued_at]["content_hash"] == job.content_hash:
+                queued_at = queued.get(job.external_id)
+                if queued_at is not None:
+                    # Duplicate within this run. Last occurrence wins, which is the
+                    # same rule the update path applies across runs.
+                    if pending[queued_at]["content_hash"] == job.content_hash:
+                        summary.unchanged += 1
+                        continue
+                    pending[queued_at] = {"external_id": job.external_id, **values}
+                    summary.updated += 1
+                    continue
+
+                previous = known.get(job.external_id)
+                if previous is not None and previous[1] == job.content_hash:
                     summary.unchanged += 1
                     continue
-                pending[queued_at] = {"external_id": job.external_id, **values}
-                summary.updated += 1
-                continue
 
-            previous = known.get(job.external_id)
-            if previous is not None and previous[1] == job.content_hash:
-                summary.unchanged += 1
-                continue
+                if previous is None:
+                    queued[job.external_id] = len(pending)
+                    pending.append({"external_id": job.external_id, **values})
+                    summary.inserted += 1
+                else:
+                    await job_repo.update_one(session, previous[0], values)
+                    known[job.external_id] = (previous[0], job.content_hash)
+                    summary.updated += 1
 
-            if previous is None:
-                queued[job.external_id] = len(pending)
-                pending.append({"external_id": job.external_id, **values})
-                summary.inserted += 1
-            else:
-                await job_repo.update_one(session, previous[0], values)
-                known[job.external_id] = (previous[0], job.content_hash)
-                summary.updated += 1
+                if len(pending) >= settings.job_ingest_batch_size:
+                    # Retain inserted identities after clearing the pending batch.
+                    known.update(await job_repo.insert_many(session, source.id, pending))
+                    pending = []
+                    queued = {}
+                    if checkpoint:
+                        await checkpoint()
+                    await session.commit()
 
-            if len(pending) >= settings.job_ingest_batch_size:
-                # Retain inserted identities after clearing the pending batch.
-                known.update(await job_repo.insert_many(session, source.id, pending))
-                pending = []
-                queued = {}
-                if checkpoint:
-                    await checkpoint()
-                await session.commit()
-
-            if summary.rows_read % _PROGRESS_EVERY == 0:
-                logger.info(
-                    "job_ingest_progress",
-                    extra={
-                        "extra_fields": {
-                            "rows_read": summary.rows_read,
-                            "inserted": summary.inserted,
-                            "updated": summary.updated,
-                            "unchanged": summary.unchanged,
-                        }
-                    },
-                )
+                if summary.rows_read % _PROGRESS_EVERY == 0:
+                    logger.info(
+                        "job_ingest_progress",
+                        extra={
+                            "extra_fields": {
+                                "rows_read": summary.rows_read,
+                                "inserted": summary.inserted,
+                                "updated": summary.updated,
+                                "unchanged": summary.unchanged,
+                            }
+                        },
+                    )
 
     await job_repo.insert_many(session, source.id, pending)
     if checkpoint:

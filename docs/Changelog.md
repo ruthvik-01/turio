@@ -1,4 +1,56 @@
-# Turio — Changelog
+﻿# Turio — Changelog
+
+## 2026-10-16 — Repository publication hygiene
+
+- Restore protective ignore rules; exclude private runtime/settings, resumes, raw QA screenshots, caches and generated document files.
+- Exclude personal-sample evidence and preserve originals locally. Retain source, tests, public schemas, documentation builders and reviewed diagrams.
+- Trim publication whitespace; backend392/47 skips, frontend build/typecheck, synthetic client checks, dependency/structure checks pass. Exact integration/push outcome: [shared history](D:/Projects/Sessions/16-10-2026/turio-github-publish.md).
+
+## 2026-10-14 — Stable application persistence
+- Keep surviving field IDs across preparation; preserve compatible answers and refresh current reusable values on explicit preparation.
+- Atomically save revision-aware batches, skip busy/unrelated sibling locks and retain other reviewed drafts. UI retries unchanged edited fields once; conflicting edits stay visible.
+- Fixed PostgreSQL User/application/Profile FK lock inversion with scoped profile locks and non-key User serialization. Backend392/47 skips, PostgreSQL74, build and rendered UI pass. [Evidence](evidence/application-persistence-2026-10-14.json); [history](D:/Projects/Sessions/14-10-2026/turio-application-persistence.md).
+
+## 2026-10-14 — Hosted RPC guard
+- Fixed false rejection of accepted form-state RPCs after blocked later requests; later writes remain blocked and final-submit/upload guards remain strict.
+- Real-browser regression and live public lookup verify the correction. 1Password draft recovered after separate user confirmation, with answers retained and a fresh public-read-only review. No employer application sent. [Evidence](evidence/hosted-rpc-guard-2026-10-14.json).
+
+## 2026-10-14 — Bug-audit corrections
+- Fixed contact-label reuse, confirmed contact/profile synchronization, inline application-only overrides, and explicitly acknowledged recovery from uncertain submissions.
+- Shared Jobs bulk controls with the application tracker, preserving independent draft IDs; expanded LinkedIn extraction, added Profile navigation, clarified Ashby support, and made auth submit types explicit.
+- Backend385/43 skipped, PostgreSQL64, rendered UI17, bulk6/reuse4 groups and build/typecheck pass. [Evidence](evidence/bug-audit-fixes-2026-10-14.json); no employer submissions or existing candidate-data edits. [History](D:/Projects/Sessions/14-10-2026/turio-bug-audit-fixes.md).
+
+
+## 2026-10-14 — Answer once and automatic Start
+- Shared confirmed answers update matching editable pending drafts and invalidate stale reviews; batch questions appear once. Protected application-specific/profile/AI/file/consent and terminal/busy records retain their values.
+- Automatic Start prepares and submits supported jobs with explicit selected-run approval, refreshes stale-profile drafts, and leaves missing/held/unsupported/uncertain jobs pending. Home loads core content independently and SQL-paginates match records; bounded reads retain refreshed session cookies on failed retry.
+- Backend404/PostgreSQL105 pass, build/typecheck and synthetic UI/proxy checks pass. Evidence: [workflow fixes](evidence/workflow-fixes-2026-10-14.json). No real employer applications sent during testing.
+- Follow-up exact 10x: pinned an equivalent public posting-query fragment and supported required `Url` scalar fields. Six required public fields now qualify with stable automatic transport; new regression/final results are in the same evidence.
+
+## 2026-10-14 — Supported hosted submission and closed jobs
+- Fixed 1Password's missing optional label, required Yes/No questions and reviewed multiselect answers. Supported fresh hosted contracts can submit after explicit existing approval; legacy drafts require preparation again.
+- Pinned employer RPCs, exact original-PDF upload, complete final answer audit and explicit success receipts retain approval/ownership boundaries. Stable review schemas exclude per-load action nonces; final permits bind fresh actions. Confirmed closed jobs disappear from active lists without deleting application history.
+- Verification and limits: [hosted submission](evidence/hosted-submission-2026-10-13.json). No real employer application submitted during testing.
+
+## 2026-10-13 — Free OpenRouter provider
+- Switched active assistance to fixed free Dots with root `.env` key alias, strict offered-choice JSON, null/unverified scores and unchanged review/bulk guards. No paid/TypeSafe fallback or credential copy.
+- Liquid privacy-filter404 and serial timeout diagnosed; kept privacy/deadline limits, disabled reasoning, combined questions and prevented false section boundaries from entry-role evidence.
+- 352 backend/78 PostgreSQL checks, one synthetic live case, build/typecheck and 14 UI groups pass. Native flag/restart healthy; no schema reset, personal PDF transfer or actual submissions. Evidence: [OpenRouter free](evidence/openrouter-free-2026-10-13.json).
+
+## 2026-10-13 — Jev source interpretation and bulk modes
+- Expanded opt-in Jev source-role classification with local validation/fallback and source spans; shared operation request budget, stale-profile protection and explicit accept/save. Key verified on synthetic text only.
+- Added review/eligible automatic bulk modes, per-job field previews/holds and explicit expiring batch approval while preserving individual review tokens/idempotency. Bound job identity and displayed values; no uncertain submission replay. Hosted final submission remains manual.
+- 342 backend/60 PostgreSQL checks, one live Jev case, build/typecheck, policy helper and 14 intercepted UI groups pass. Native stack restarted with retained data; no real applications submitted. Evidence: [Jev/bulk modes](evidence/jev-bulk-modes-2026-10-13.json).
+
+## 2026-10-13 — Letter-spaced resume follow-up
+- Fixed exact known character-spaced section aliases, multiline internship facts, degree-date captions, grouped skill qualifiers and visible bare domains; `rules-v6-heading-spacing` forces explicit reupload refresh. No invented social URLs.
+- 334 backend tests/35 PostgreSQL tests and both supplied PDF checks pass; runtime restarted, health/login 200. No Google/provider calls, native sample-profile overwrite or frontend/schema change.
+- Evidence: [private heading-spacing evidence availability](SECURITY_PRIVACY.md#private-verification-evidence); shared daily topic remains `D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`.
+
+## 2026-10-13 — Varied resume layouts, local extraction + Jev only
+- Added positional page/column reading order, source contact/project guards and editable supplemental profile facts; no Google service or automatic cloud transfer. Additive migration `a231013001`, parser `rules-v5-multipage`; opt-in Jev suggestions retain explicit review.
+- 329 backend tests, 30 PostgreSQL API tests, migration/drift, typecheck/build and four intercepted UI groups pass. Native migration/restart preserves existing candidate data. Sample retained five projects/four certifications/one achievement; visual and new live-provider verification remain unclaimed.
+- Evidence: [private resume-layout evidence availability](SECURITY_PRIVACY.md#private-verification-evidence); history: `D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`. Reupload older resumes and review; uncommitted changes retained.
 
 ## 2026-09-15 — Read-only application inspection
 - Inspected project implementation and documentation.
@@ -208,3 +260,51 @@ freeze/evaluation or real submission. Matrix: [[DELIVERY_STATUS]]. Evidence:
 - Next: publish reviewed changes through an authorized handoff and run the guarded CI workflow. Full UI integration, live-company validation and consented human evaluation remain open.
 
 GitHub publication handoff (September 17): user authorized pushing the engineering changes to origin/phase-0-foundation. Git credential-manager dry run succeeded despite unauthenticated gh CLI. Local environments, datasets, synthetic intake, browser captures, raw XML logs and design-reference images excluded. Existing verification results unchanged; remote CI outcome still pending.
+
+## Resume/company usability follow-up — September 17, 2026
+- Fixed project bullet grouping and intact/explicit technology extraction; parser v2 reprocessing retains the same resume/object. Simplified upload UI and updated smoke selectors.
+- Supabase was present before changes. Added full-catalog count/search hint and exact Enter selection; live UI verified 61 Supabase jobs, pagination and combined filters.
+- Added owner-scoped browser-capability read and upfront disabled state; no automation enablement or live submission. Existing approval safeguards retained.
+- Frontend build/typecheck and image builds passed; deployed backend/worker/frontend. Six live UI groups and seven intercepted application-contract groups passed. Full backend: 209 passed, one minute-boundary auth-test failure; unchanged isolated rerun passed. No rate-limit changes. Screenshot captured, image inspection unavailable.
+- Evidence/file list: [[evidence/profile-company-usability-2026-09-17]]. Local follow-up changes are not committed/pushed. Next: user re-uploads once to apply corrected parsing and reviews projects; obtain a redacted example if their PDF still exposes a layout-specific issue. Live-company/human evaluation gates remain open.
+
+## Live-agent integration audit — September 17, 2026
+Read-only Supabase Application-tab inspection confirmed a JavaScript/API form with reCAPTCHA and no native HTML form. Turio currently instantiates Browser Use Browser, not Agent; its native-form gate cannot operate this page merely by enabling the flag. No candidate data entered, upload, submit click or external LLM request. Project-level model integration is unconfigured; unrelated process credentials were not used. Next: user chooses the model/provider and data-processing approach before implementing an actual Agent path with separately audited hosted-form transport. Preserve explicit approval and manual CAPTCHA handling. Evidence: [[evidence/live-agent-blockers-2026-09-17]].
+
+## October 10, 2026 — Native-only local development
+- Removed local Dockerfiles/ignore/Compose files and obsolete Compose verification helpers under ADR-042; ignored `.runtime/docker-removal-backup/` retains originals and pre-existing Compose edits. No system uninstall or database/PDF deletion.
+- Promoted native startup with fail-fast provisioning checks; reconciled README, deployment, structure, system design, manifest and current context. PostgreSQL CI service and historical evidence retained.
+- Fresh checks: 230 backend tests passed, 18 skipped; structure, PowerShell syntax/preflight/reentry and diff checks passed. API/login HTTP 200 and all four managed service processes running. Fresh provisioning, optional integration/remote CI and reboot resilience not claimed.
+- Detail: `D:/Projects/Sessions/10-10-2026/turio-docker-removal.md`.
+
+## 2026-10-11 — Jev functional integration
+- Owner-only heading suggestions, atomic stale-save checks, opt-in field mapping and explicit Jev confirmation/provenance implemented; ADR-041/privacy recorded.
+- Strict pinned adapter, shared work/advisory limits and bounded source/request/response handling; no product dependency or migration.
+- Mocked API/UI and isolated PostgreSQL verification; live TypeSafe, retention review and employer/human acceptance remain open. Details: [JEV_ASSISTANCE.md](JEV_ASSISTANCE.md); shared history: D:/Projects/Sessions/11-10-2026/turio-jev-completion.md.
+
+### 2026-10-11 ? Authorized Jev pilot
+- Direct question-source binding and type-aware form semantics; review-only uncertain suggestions retain confirmation/provenance.
+- Local positional PDF reading order, contact annotation boundaries and grouped skill/job/education fixes; parser rules-v3-layout.
+- Verification: `evidence/jev-live-pilot-2026-10-11.json`; shared history `D:/Projects/Sessions/11-10-2026/turio-jev-live-pilot.md`.
+
+## 2026-10-12 — Hosted agent preparation and manual filling
+
+- Enable valid Ashby company postings, pinned public reads and current asset CDN.
+- Prepare hosted answers without candidate transfer; explicit reviewed handoff opens
+  a visible browser, fills supported controls and reuses the original stored PDF.
+- Preserve manual custom-control/CAPTCHA completion and user submission; never record
+  handoff as submitted. Owner/version/schema gates and idempotency remain enforced.
+- Shared detail: [turio-agent.md](D:/Projects/Sessions/12-10-2026/turio-agent.md).
+
+## 2026-10-13 — Answer reuse and bulk preparation
+
+- Automatically reuse recognized resume/profile facts and confirmed typed answers; support bare social profile URLs (rules-v4-contact) and legacy stored answers.
+- Show missing/unconfirmed questions with a filled-answer summary and correction controls.
+- Select jobs/matches for sequential bulk preparation with current-state reuse, per-job results, retry and stop; preserve individual final approval and required form consent.
+- Shared detail: [turio-answer-reuse-bulk.md](D:/Projects/Sessions/13-10-2026/turio-answer-reuse-bulk.md).
+
+### Required questions and employer field formats
+- Hide optional prompts, omit unconfirmed optional review values and preserve required confirmation checks.
+- Correct duplicate hosted radio values; skip unanswered optional controls safely in hosted/native forms.
+- Add employer instruction and salary currency/period/format guidance; unknown currency stays explicit.
+- [Follow-up verification](evidence/optional-salary-followup-2026-10-13.json); shared history remains the October 13 topic above.

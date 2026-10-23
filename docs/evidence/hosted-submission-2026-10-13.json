@@ -1,0 +1,59 @@
+{
+  "feature": "Approved hosted submission and closed-job filtering",
+  "implementation_started": "2026-10-13",
+  "verification_date": "2026-10-14",
+  "workspace": "D:/College/4-2 project",
+  "transport": "ashby-hosted-v2",
+  "schema_contract_version": "stable-actions-v1",
+  "changes": [
+    "Public metadata supplies the missing 1Password future-contact field label",
+    "Required Boolean questions accept confirmed Yes or No; multiselect answers preserve available unique choices",
+    "Pinned hosted RPCs and exact original-PDF upload require existing explicit reviewed approval",
+    "Final audit binds all approved answers, owned file identity and fresh form/action identifiers",
+    "Only explicit FormSubmitSuccess for application and surveys records submission; uncertain results do not replay",
+    "Stable review hashes exclude per-load action nonces; legacy snapshots require preparation again",
+    "Confirmed closed or expired postings leave active jobs/matches while application history remains",
+    "CSV refresh preserves confirmed closure; temporary network failures do not close jobs"
+  ],
+  "checks": {
+    "latest_focused_hosted_browser": {"passed": 39, "seconds": 34.27},
+    "backend_final": {"status": "passed", "passed": 397, "skipped": 9, "seconds": 197.88, "browser_tests_enabled": true},
+    "postgresql_final": {"status": "passed", "passed": 84, "skipped": 3, "seconds": 40.37, "migration_upgrade": "passed", "schema_drift": "none", "cleanup": "Disposable database removed", "isolation": "Dedicated disposable database; production data untouched"},
+    "production_guard_transport_fixtures": {
+      "passed": 5,
+      "cases": ["single-form success", "application plus surveys", "prior approved answer overwritten is blocked", "HTTP 200 without success is rejected", "removed posting detected"],
+      "network": "Synthetic browser requests intercepted; no real employer mutations"
+    },
+    "ui_deployed": {
+      "passed_groups": 3,
+      "requests": 17,
+      "unexpected_requests": 0,
+      "page_errors": 0,
+      "cases": ["multiselect and No save/display without early submission", "one supported hosted submission after explicit approval", "closed posting removed and deselected while open posting remains"],
+      "network": "Intercepted API fixtures against deployed frontend"
+    },
+    "bulk_ui_deployed": {"passed_groups": 6, "requests": 122, "unexpected_requests": 0, "page_errors": 0, "network": "Intercepted API fixtures"},
+    "frontend": {"typecheck": "passed", "production_build": "passed", "bulk_policy": "passed"},
+    "review": {"reviewer": "/root/review_hosted_submission", "mode": "read-only", "important_findings": "Verified and fixed optional final variables, complete final state audit and JSON number/Boolean comparison", "latest_report": "No important unresolved findings in reviewed code; six inert checks passed", "limits": "Review predates final action-nonce fix; final notification encountered model capacity error"},
+    "live_public_inspection": {
+      "posting": "https://jobs.ashbyhq.com/1password/9854ad4c-6176-43e0-a379-53a238839f15/application",
+      "fields": 37,
+      "required": 19,
+      "manual_submission_required": false,
+      "schema_stable_across_loads": true,
+      "candidate_data_sent": false,
+      "employer_submission_attempted": false
+    },
+    "native_runtime": {"status": "running final code", "url": "http://127.0.0.1:13000", "api_health_status": 200, "api_database": "ok", "frontend_proxy_health_status": 200, "login_status": 200, "ports": [13000, 18080, 18543, 19000], "postgresql_pid": 11132, "storage_pid": 24148, "api_wrapper_pid": 672, "api_child_pid": 23960, "frontend_pid": 20096, "worker_wrapper_pid": 11540, "worker_child_pid": 8340, "data": "Existing database/object storage preserved; stale process records removed without stopping unrelated processes"},
+    "diff_whitespace": "passed"
+  },
+  "limits": [
+    "No actual employer application or real candidate upload was performed during testing",
+    "Real CAPTCHA completion and employer submission remain unverified",
+    "Unsupported controls and challenges require manual interaction",
+    "Capability depends on each freshly inspected form; no universal company support claim",
+    "No schema/dependency change, commit or push; extensive pre-existing work preserved"
+  ],
+  "history": "D:/Projects/Sessions/14-10-2026/turio-hosted-auto-submit.md",
+  "prior_history": "D:/Projects/Sessions/13-10-2026/turio-hosted-auto-submit.md"
+}

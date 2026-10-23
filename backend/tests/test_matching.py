@@ -13,6 +13,25 @@ from app.services.job_ingestion import ingest_dataset
 from support import auth_headers, job_row, write_jobs_csv
 
 
+async def test_home_match_listing_loads_only_requested_page(client, session, tmp_path):
+    from sqlalchemy import event
+    headers, _ = await seed(client, session, tmp_path)
+    assert (await client.post('/api/v1/matches', headers=headers, json={'method': 'keyword'})).status_code == 200
+    statements = []
+    def capture(connection, cursor, statement, parameters, context, many):
+        if 'job_matches.explanation_payload' in statement.lower():
+            statements.append(statement.lower())
+    engine = session.bind.sync_engine
+    event.listen(engine, 'before_cursor_execute', capture)
+    try:
+        response = await client.get('/api/v1/matches?method=keyword&limit=1&offset=1', headers=headers)
+    finally:
+        event.remove(engine, 'before_cursor_execute', capture)
+    assert response.status_code == 200, response.text
+    assert response.json()['data']['total'] == 2 and len(response.json()['data']['matches']) == 1
+    assert statements and all('limit' in statement for statement in statements), 'Home must not load every match explanation to display a small page'
+
+
 async def seed(client, session, tmp_path):
     headers = await auth_headers(client)
     await client.patch("/api/v1/profiles/me", headers=headers,

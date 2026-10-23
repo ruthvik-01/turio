@@ -33,21 +33,20 @@ The interface should feel premium, calm, spacious, clear, and consumer-product o
 
 ## 2. Current approved visual direction
 
-The approved reference uses a light cream/near-white canvas with soft natural green accents, rounded white surfaces, restrained glass/frosted effects, subtle depth, and editorial display typography combined with a clean sans-serif UI font.
+ADR-049 records the user's correction (2026-10-20): centered text-only Turio branding on public pages, no duplicated header auth controls, a real volumetric WebGL field with static fallback, and measured hover/exit/surface/heading/content transitions matching the reference's motion language. The prior CSS-gradient delivery was rejected; synthetic style checks alone are not visual acceptance or real-login evidence.
 
 The approved direction includes:
-- light cream/soft neutral canvas,
-- muted natural greens,
-- white/off-white rounded cards,
-- subtle frosted surfaces where appropriate,
-- very restrained shadows and borders,
-- editorial serif-style display headings,
-- clean sans-serif UI text,
-- generous whitespace,
-- no permanent desktop left sidebar,
-- top navigation on desktop,
-- compact responsive navigation on smaller screens,
-- simple, purposeful motion.
+- near-white/charcoal light and dark canvases with opaque workspace surfaces,
+- a text-only Turio name, centered on public pages, with no copied reference branding,
+- an inset pill-shaped frosted top header and pill actions/tabs,
+- 500–600-weight system-sans display and UI text,
+- generous public-page spacing and practical data/form layouts,
+- no permanent desktop left sidebar or new routes,
+- existing navigation/auth actions and responsive mobile workflows,
+- original volumetric WebGL field plus measured route, hover and staggered reveal motion,
+- static/solid accessibility fallbacks, no new animation package, commercial font or copied reference asset.
+
+Detailed contract: [Turio Atmos design](superpowers/specs/2026-10-19-turio-atmos-design.md).
 
 Do not turn the whole interface into heavy glassmorphism. Glass is a supporting material, not the entire UI.
 
@@ -55,10 +54,7 @@ Do not turn the whole interface into heavy glassmorphism. Glass is a supporting 
 
 ### Display
 
-Use an editorial serif-style face for:
-- hero headlines,
-- major editorial statements,
-- motivational quotes where shown in the approved reference.
+Use the existing system-sans family for hero and page headings, with 500–600 weight and restrained scale. Landing headings use 40px desktop/28px mobile; page headings use 28px/24px. Do not add serif headings or marketing filler.
 
 ### UI
 
@@ -86,13 +82,13 @@ The Turio logo/wordmark is an asset. Do not recreate the wordmark using a web fo
 
 ## 5. Color direction
 
-Use a cream/white base with natural green as the primary brand-adjacent accent.
+Use paired near-white/charcoal palettes from the approved design spec. Primary interface actions are neutral; the supplied green logo remains unchanged. Existing status/chart roles retain labels and non-colour encodings, with readable themed surfaces.
 
 Supporting neutrals:
-- deep navy/charcoal for text,
-- soft gray for metadata,
-- pale cream for secondary surfaces,
-- restrained success/warning/danger colors only where status semantics require them.
+- strong light/dark text and readable muted metadata,
+- mostly opaque workspace/input surfaces,
+- thin decorative hairlines and stronger input boundaries,
+- restrained success/warning/danger colours only where status semantics require them.
 
 Do not introduce competing bright accent colors merely for decoration.
 

@@ -78,6 +78,42 @@ async def test_create_replay_and_conflicting_key(client, flow):
     assert (await client.get("/api/v1/applications", headers=headers)).json()["data"]["total"] == 1
 
 
+async def test_capability_is_owner_scoped_and_does_not_prepare(client, flow):
+    headers, app, adapter = flow
+    path = f"/api/v1/applications/{app['id']}/capability"
+    assert (await client.get(path)).status_code == 401
+    other = await auth_headers(client, "other-capability@example.com")
+    assert (await client.get(path, headers=other)).status_code == 404
+    response = await client.get(path, headers=headers)
+    assert response.json()["data"] == {"available": True, "reason": None}
+    assert adapter.fills == [] and adapter.submissions == []
+    stored = (await client.get(f"/api/v1/applications/{app['id']}", headers=headers)).json()["data"]
+    assert stored["status"] == "created" and stored["fields"] == []
+
+
+async def test_capability_reports_disabled_automation_without_enabling_it(client, flow, monkeypatch):
+    from app.core.config import get_settings
+
+    headers, app, _ = flow
+    client._transport.app.dependency_overrides.pop(get_adapter)
+    monkeypatch.setattr(get_settings(), "browser_automation_enabled", False)
+    response = await client.get(f"/api/v1/applications/{app['id']}/capability", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["data"]["available"] is False
+    assert "disabled" in response.json()["data"]["reason"]
+    assert get_settings().browser_automation_enabled is False
+
+
+async def test_capability_accepts_ashby_company_outside_original_trial(client, flow, monkeypatch):
+    from app.core.config import get_settings
+
+    headers, app, _ = flow
+    client._transport.app.dependency_overrides.pop(get_adapter)
+    monkeypatch.setattr(get_settings(), "browser_automation_enabled", True)
+    response = await client.get(f"/api/v1/applications/{app['id']}/capability", headers=headers)
+    assert response.json()["data"] == {"available": True, "reason": None}
+
+
 async def test_mapping_reuses_known_data_never_infers_authorization(client, flow):
     headers, app, adapter = flow
     response = await client.post(f"/api/v1/applications/{app['id']}/start", headers=headers)
@@ -342,10 +378,17 @@ async def test_unexpected_submit_failure_is_recorded_without_sensitive_details(c
 
 
 async def test_summary_is_owner_scoped(client, flow):
-    headers, _, _ = flow
+    headers, app, adapter = flow
     result = (await client.get("/api/v1/applications/summary", headers=headers)).json()["data"]
-    assert result["total"] == 1 and result["in_progress"] == 1
+    assert result["total"] == 1 and result["in_progress"] == 1 and result["needs_attention"] == 0
     assert len(result["days"]) == 28 and sum(d["count"] for d in result["days"]) == 1
+    prefix = await prepared(client, headers, app)
+    reviewed = (await client.post(prefix + "/review", headers=headers)).json()["data"]
+    assert reviewed["reviewed_at"] is not None
+    adapter.error = AppError("BROWSER_ACTION_FAILED", "Fixture failure.", 503)
+    assert (await client.post(prefix + "/start", headers=headers)).status_code == 503
+    failed_summary = (await client.get("/api/v1/applications/summary", headers=headers)).json()["data"]
+    assert failed_summary["total"] == 1 and failed_summary["in_progress"] == 0 and failed_summary["needs_attention"] == 1
     other = await auth_headers(client, "empty-summary@example.com")
     assert (await client.get("/api/v1/applications/summary", headers=other)).json()["data"]["total"] == 0
 
@@ -354,7 +397,7 @@ async def test_factual_draft_requires_confirmation_and_does_not_answer_sensitive
     headers, app, adapter = flow
     schema = copy.deepcopy(FORM)
     schema["fields"].append({"field_key": "background", "label": "Describe your relevant experience",
-        "input_type": "textarea", "required": False, "source_locator": "#background", "options": []})
+        "input_type": "textarea", "required": True, "source_locator": "#background", "options": []})
 
     async def inspect(url):
         return schema

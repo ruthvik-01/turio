@@ -37,7 +37,7 @@ async def main():
             "name": "synthetic-resume.pdf", "mimeType": "application/octet-stream", "buffer": build_pdf(RESUME_TEXT),
         })
         async with page.expect_response(lambda r: r.url.endswith("/api/resumes") and r.request.method == "POST") as uploaded:
-            await page.get_by_role("button", name="Upload & extract").click()
+            await page.get_by_role("button", name="Upload resume", exact=True).click()
         response = await uploaded.value
         assert response.status == 201, await response.text()
         resume = (await response.json())["data"]["resume"]
@@ -66,11 +66,19 @@ async def main():
         await page.wait_for_url("**/applications/*")
         await page.get_by_text("Your stored resume and profile will be reused.", exact=False).wait_for()
         checks.append("Job → application preparation selects the already stored resume without another upload")
-        await page.get_by_role("button", name="Apply with Agent", exact=True).click()
-        await page.get_by_text("Browser assistance is disabled.", exact=False).wait_for()
-        current = await page.evaluate("async id => (await (await fetch('/api/applications/' + id)).json()).data", app["id"])
-        assert current["status"] == "created" and current["resume_id"] == resume["id"]
-        checks.append("Apply with Agent reaches the existing start endpoint; disabled automation fails visibly without submission")
+        apply = page.get_by_role("button", name="Apply with Agent", exact=True)
+        if await apply.is_disabled():
+            await page.get_by_text("Continue manually", exact=False).wait_for()
+            current = await page.evaluate("async id => (await (await fetch('/api/applications/' + id)).json()).data", app["id"])
+            assert current["status"] == "created" and current["resume_id"] == resume["id"]
+            checks.append("Apply with Agent safely disabled outside trial allowlist; reason displayed visibly without submission")
+        else:
+            page.on("dialog", lambda d: asyncio.create_task(d.accept()))
+            await apply.click()
+            await page.get_by_text("Browser assistance is disabled.", exact=False).wait_for()
+            current = await page.evaluate("async id => (await (await fetch('/api/applications/' + id)).json()).data", app["id"])
+            assert current["status"] == "created" and current["resume_id"] == resume["id"]
+            checks.append("Apply with Agent reaches the existing start endpoint; disabled automation fails visibly without submission")
         await page.screenshot(path=str(output / "application-preparation.png"), full_page=True)
 
         # Intercept only this page's action responses to exercise the approval UI;
@@ -82,7 +90,9 @@ async def main():
         submissions = []
         async def actions(route):
             action = route.request.url.rsplit("/", 1)[-1]
-            if action == "start":
+            if action == "capability":
+                data = {"available": True, "reason": None}
+            elif action == "start":
                 data = {**prepared, "review_token": None}
             elif action == "review":
                 data = {**prepared, "review_token": "intercepted-ui-review"}
@@ -95,7 +105,9 @@ async def main():
                 await route.continue_()
                 return
             await route.fulfill(json={"data": data, "error": None, "request_id": "ui-contract-fixture"})
+        page.on("dialog", lambda d: asyncio.create_task(d.accept()))
         await page.route(f"**/api/applications/{app['id']}/*", actions)
+        await page.goto(base + f"/applications/{app['id']}")
         await page.get_by_role("button", name="Apply with Agent", exact=True).click()
         await page.get_by_text("Your stored original resume is selected.", exact=True).wait_for()
         await page.get_by_role("button", name="Prepare final review", exact=True).click()

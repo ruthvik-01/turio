@@ -24,7 +24,7 @@ async def generate(payload: MatchRequest, user_id: CurrentUserId, session: Sessi
 
 
 @router.get("", response_model=Envelope[MatchPage])
-async def list_matches(user_id: CurrentUserId, session: SessionDep, method: MatchMethod = "keyword",
+async def list_matches(user_id: CurrentUserId, session: SessionDep, method: MatchMethod = "sbert",
                        limit: Annotated[int, Query(ge=1, le=100)] = 20,
                        offset: Annotated[int, Query(ge=0)] = 0):
     return envelope(await matching.list_matches(session, user_id, method, limit, offset))

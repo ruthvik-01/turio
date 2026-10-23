@@ -14,9 +14,11 @@ from app.core.db import get_session
 from app.core.errors import AppError
 from app.core.time import utcnow
 from app.repositories import applications as repo
+from app.repositories import jobs as job_repo
+from app.models.job import Job
 from app.models.profile import Profile
 from app.ml.scoring import digest
-from app.schemas.application import AnswersRequest, ApplicationCreate, ApplicationData, ApplicationPage, ApplicationPatch, ApplicationStatus, ApprovalRequest, Outcome
+from app.schemas.application import AnswersRequest, ApplicationCapability, ApplicationCreate, ApplicationData, ApplicationPage, ApplicationPatch, ApplicationStatus, ApprovalRequest, Outcome, PreparationRequest
 from app.schemas.envelope import Envelope, envelope
 from app.services import applications as service
 
@@ -39,15 +41,43 @@ def get_adapter(application_id: UUID, user_id: CurrentUserId, session: SessionDe
         app = await repo.owned(session, user_id, application_id)
         await session.refresh(app)
         version = await session.scalar(select(Profile.version).where(Profile.user_id == user_id))
+        active_job = await session.scalar(select(Job.id).where(Job.id == app.job_id, job_repo.eligible()))
+        if active_job is None:
+            raise AppError("JOB_UNAVAILABLE", "This posting is no longer accepting applications.", 404)
         if (app.status != "submitting" or app.review_token != digest(snapshot) or app.profile_version != version
             or app.operation_token != getattr(adapter, "operation_token", None)
             or not app.operation_expires_at or app.operation_expires_at <= utcnow()):
             raise AppError("SUBMISSION_NOT_APPROVED", "The approved application changed. Submission has been stopped.", 409)
     adapter = AshbyAdapter(load_resume, authorize)
+    async def authorize_handoff(snapshot):
+        app = await repo.owned(session, user_id, application_id)
+        await session.refresh(app)
+        version = await session.scalar(select(Profile.version).where(Profile.user_id == user_id))
+        if (app.status != "preparing" or app.operation_kind != "handoff" or app.review_token != digest(snapshot)
+            or app.profile_version != version or app.operation_token != adapter.operation_token
+            or not app.operation_expires_at or app.operation_expires_at <= utcnow()):
+            raise AppError("SUBMISSION_NOT_APPROVED", "The approved handoff changed. Browser filling has been stopped.", 409)
+    adapter.authorize_handoff = authorize_handoff
     return adapter
 
 
 AdapterDep = Annotated[AshbyAdapter, Depends(get_adapter)]
+
+
+@router.get("/{application_id}/capability", response_model=Envelope[ApplicationCapability])
+async def capability(application_id: UUID, user_id: CurrentUserId, session: SessionDep, adapter: AdapterDep):
+    """Report configuration/URL eligibility without launching a browser.
+
+    Available means preparation can be attempted, not live-company validation.
+    """
+    app = await repo.owned(session, user_id, application_id)
+    try:
+        adapter.check_url(app.application_url)
+    except AppError as exc:
+        if exc.code != "UNSUPPORTED_APPLICATION":
+            raise
+        return envelope(ApplicationCapability(available=False, reason=exc.message))
+    return envelope(ApplicationCapability(available=True))
 
 
 @router.post("", response_model=Envelope[ApplicationData], status_code=201)
@@ -78,8 +108,8 @@ async def fields(application_id: UUID, user_id: CurrentUserId, session: SessionD
 
 
 @router.post("/{application_id}/start", response_model=Envelope[ApplicationData])
-async def start(application_id: UUID, user_id: CurrentUserId, session: SessionDep, adapter: AdapterDep):
-    return envelope(await service.start(session, user_id, application_id, adapter))
+async def start(application_id: UUID, user_id: CurrentUserId, session: SessionDep, adapter: AdapterDep, payload: PreparationRequest | None = None):
+    return envelope(await service.start(session, user_id, application_id, adapter, ai_assist=bool(payload and payload.ai_assist)))
 
 
 @router.post("/{application_id}/answers", response_model=Envelope[ApplicationData])
@@ -101,6 +131,12 @@ async def draft(application_id: UUID, field_id: UUID, user_id: CurrentUserId, se
 async def approve(application_id: UUID, payload: ApprovalRequest, user_id: CurrentUserId, session: SessionDep,
                   idempotency_key: RequestKey, adapter: AdapterDep):
     return envelope(await service.approve(session, user_id, application_id, payload, idempotency_key, adapter))
+
+
+@router.post("/{application_id}/handoff", response_model=Envelope[ApplicationData])
+async def handoff(application_id: UUID, payload: ApprovalRequest, user_id: CurrentUserId, session: SessionDep,
+                  idempotency_key: RequestKey, adapter: AdapterDep):
+    return envelope(await service.handoff(session, user_id, application_id, payload, idempotency_key, adapter))
 
 
 @router.patch("/{application_id}", response_model=Envelope[ApplicationData])

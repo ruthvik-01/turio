@@ -73,6 +73,8 @@ Responsible for browser interaction through Browser Use. Website-specific logic 
 ### Tracking
 Responsible for persistent application events/status.
 
+Resume ingestion uses local positional text extraction across pages and section-backed columns. Text-only Jev assistance remains explicitly opted in and review-only; no Google OCR or PDF-byte transfer. Supplemental source-backed profile facts (application contact email, summary, certifications, achievements) are nullable, additive storage; account email and sensitive declarations are unchanged. Unreadable pages fail before replacing saved facts (ADR-044).
+
 ## 3. Data flow
 
 ```text
@@ -170,12 +172,16 @@ turio/
 ├── data/
 ├── experiments/
 ├── docs/
-├── scripts/
-├── docker/
+├── scripts/                 # native startup, import and verification
 ├── alembic/
 │   └── versions/
 ├── .env.example
 ├── .gitignore
-├── docker-compose.yml
 └── README.md
 ```
+
+Local deployment uses native PostgreSQL/S3rver/FastAPI/worker/Next.js under ADR-042.
+The tracked launcher is `scripts/start-local-stack.ps1`; ignored `.runtime/native/`
+holds installed services, settings and persistent data. No local Docker/WSL is
+required. Historical container verification does not imply that container files
+remain bundled; see `DEPLOYMENT.md`.

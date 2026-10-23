@@ -8,11 +8,11 @@ from pydantic import BaseModel, Field
 
 from app.schemas.job import JobData
 
-MatchMethod = Literal["keyword", "tfidf", "sbert"]
+MatchMethod = Literal["sbert", "keyword", "tfidf"]
 
 
 class MatchRequest(BaseModel):
-    method: MatchMethod = "keyword"
+    method: MatchMethod = "sbert"
 
 
 class MatchData(BaseModel):

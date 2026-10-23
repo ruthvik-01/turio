@@ -1,0 +1,139 @@
+{
+  "passed": 15,
+  "failed": 0,
+  "checks": [
+    {
+      "check": "navigation labels fit click targets",
+      "width": 390,
+      "passed": true,
+      "crowded": []
+    },
+    {
+      "check": "skip destination clear of sticky header",
+      "width": 390,
+      "passed": true,
+      "hash": "#main-content",
+      "headingTop": 189.39907836914062,
+      "headerBottom": 130,
+      "scrollY": 0,
+      "longPage": true
+    },
+    {
+      "check": "company option pointer selection",
+      "width": 390,
+      "passed": true,
+      "selected": true,
+      "unobscured": true,
+      "hit": "SPAN",
+      "hitText": "Synthetic Company 02",
+      "x": 110,
+      "y": 739.203125,
+      "bulkTop": 737.21875,
+      "filterZ": "1"
+    },
+    {
+      "check": "theme toggle real pointer",
+      "width": 390,
+      "passed": true
+    },
+    {
+      "check": "header client navigation retains theme",
+      "width": 390,
+      "passed": true
+    },
+    {
+      "check": "navigation labels fit click targets",
+      "width": 768,
+      "passed": true,
+      "crowded": []
+    },
+    {
+      "check": "skip destination clear of sticky header",
+      "width": 768,
+      "passed": true,
+      "hash": "#main-content",
+      "headingTop": 217.72964477539062,
+      "headerBottom": 146,
+      "scrollY": 0,
+      "longPage": true
+    },
+    {
+      "check": "company option pointer selection",
+      "width": 768,
+      "passed": true,
+      "selected": true,
+      "unobscured": true,
+      "hit": "SPAN",
+      "hitText": "Synthetic Company 02",
+      "x": 377.9921875,
+      "y": 616.34375,
+      "bulkTop": 585.5625,
+      "filterZ": "1"
+    },
+    {
+      "check": "theme toggle real pointer",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "check": "header client navigation retains theme",
+      "width": 768,
+      "passed": true
+    },
+    {
+      "check": "navigation labels fit click targets",
+      "width": 1280,
+      "passed": true,
+      "crowded": []
+    },
+    {
+      "check": "skip destination clear of sticky header",
+      "width": 1280,
+      "passed": true,
+      "hash": "#main-content",
+      "headingTop": 153.73043823242188,
+      "headerBottom": 82,
+      "scrollY": 0,
+      "longPage": true
+    },
+    {
+      "check": "company option pointer selection",
+      "width": 1280,
+      "passed": true,
+      "selected": true,
+      "unobscured": true,
+      "hit": "SPAN",
+      "hitText": "Synthetic Company 02",
+      "x": 583.9140625,
+      "y": 496.546875,
+      "bulkTop": 441.765625,
+      "filterZ": "1"
+    },
+    {
+      "check": "theme toggle real pointer",
+      "width": 1280,
+      "passed": true
+    },
+    {
+      "check": "header client navigation retains theme",
+      "width": 1280,
+      "passed": true
+    }
+  ],
+  "unexpected_requests": [],
+  "page_errors": [],
+  "requests": [
+    "/api/auth/me",
+    "/api/jobs",
+    "/api/jobs/companies",
+    "/api/jobs",
+    "/api/auth/me",
+    "/api/jobs",
+    "/api/jobs/companies",
+    "/api/jobs",
+    "/api/auth/me",
+    "/api/jobs",
+    "/api/jobs/companies",
+    "/api/jobs"
+  ]
+}

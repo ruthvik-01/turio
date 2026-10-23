@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, ForeignKey, Integer, String, Uuid
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.time import utcnow
@@ -24,6 +24,10 @@ class Profile(Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
     full_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contact_email: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    certifications: Mapped[list[str] | None] = mapped_column(JsonB, nullable=True)
+    achievements: Mapped[list[str] | None] = mapped_column(JsonB, nullable=True)
     phone: Mapped[str | None] = mapped_column(String(64), nullable=True)
     location: Mapped[str | None] = mapped_column(String(255), nullable=True)
     preferred_roles: Mapped[list[str] | None] = mapped_column(JsonB, nullable=True)

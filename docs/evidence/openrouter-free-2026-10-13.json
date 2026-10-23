@@ -1,0 +1,17 @@
+{
+  "verified_at": "2026-10-13T16:26:19+05:30",
+  "workspace": "D:/College/4-2 project",
+  "provider": "openrouter",
+  "model": "dots-studio/dots-3-note-preview:free",
+  "credential_source": "Project-root .env, existing Open_Router alias; no key displayed or copied",
+  "backend": {"passed": 352, "skipped": 34, "seconds": 83.19, "log": ".runtime/openrouter-switch/backend-final-verified.log"},
+  "postgresql": {"passed": 78, "seconds": 16.04, "schema_drift": false, "isolated_database_removed": true, "native_schema_changed": false},
+  "live_synthetic": {"passed": 1, "seconds": 8.27, "key_authenticated": true, "source_company_role_project_boundaries_correct": true, "profile_mutation": false, "personal_pdf_transfer": false, "log": ".runtime/openrouter-switch/live-final-verified.log"},
+  "frontend": {"typecheck": "passed", "production_build": "passed", "interpretation_ui_groups": 4, "bulk_ui_groups": 6, "answer_reuse_ui_groups": 4, "page_errors": 0, "unexpected_requests": 0},
+  "controls": ["Pinned free model; no paid/router/TypeSafe fallback", "Structured JSON schema and provider data_collection=deny", "Reasoning disabled for classification", "Shared 15-second/three-request budget and advisory lock", "Known heading/fact questions combined; entry-role evidence vetoes contradictory section headings", "Validated source choices only; unavailable confidence/probability scores are null and explicitly uncertain", "Explicit source acceptance/form confirmation and unchanged bulk approval safeguards"],
+  "diagnosed_failures": ["Liquid free model returned HTTP404 with privacy filter; synthetic diagnostic without filter returned200, never applied to personal/production requests", "Alternative Dots free endpoint accepted the privacy filter but serial rounds timed out", "Disabling reasoning and combining requests reduced round trips; normalized synthetic trace identified a contradictory job-title/header vote, fixed with entry-role veto"],
+  "runtime": {"provider": "openrouter", "enabled": true, "api_parent_pid": 15144, "frontend_parent_pid": 27180, "worker_parent_pid": 27980, "api_health_http": 200, "frontend_login_http": 200, "data_and_storage_retained": true},
+  "limitations": ["Synthetic functional verification is not an accuracy/speed benchmark", "Free provider availability/rate limits may change; failure retains local/manual fallback", "Routing data filter does not prove account-level zero retention", "Scanned PDFs and hosted Ashby automatic final submission remain unsupported/manual", "No actual employer applications submitted, new dependencies/tables/routes, commits or pushes"],
+  "review": "Author self-review only; no subagent tool",
+  "history": "D:/Projects/Sessions/13-10-2026/turio-openrouter-switch.md"
+}

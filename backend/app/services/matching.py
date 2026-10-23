@@ -20,24 +20,41 @@ from app.services.profile import get_profile
 
 
 def config_identity(config: dict) -> str:
-    # Experience intervals ending "Present" depend on today's date.
-    return digest([config, utcnow().date().isoformat()])
+    # Experience intervals ending "Present" depend on the current month.
+    return digest([config, utcnow().date().strftime("%Y-%m")])
 
 
 async def semantic_scores(session, user_id, profile, jobs, config) -> list[float]:
+    import numpy as np
+
     identity = [config["model_name"], config["model_revision"], config["representation_version"]]
     texts = [candidate_text(profile)] + [job_text(job) for job in jobs]
     keys = [digest([identity, str(user_id), profile.version, texts[0]])]
     keys += [digest([identity, str(job.id), job.content_hash]) for job in jobs]
     cached = await repo.cached_vectors(session, keys)
     missing = [index for index, key in enumerate(keys) if key not in cached]
+    buffered_values = []
     for start in range(0, len(missing), config["batch_size"]):
         batch = missing[start:start + config["batch_size"]]
         vectors = await asyncio.to_thread(encoder.encode, [texts[index] for index in batch], config)
         values = [{"cache_key": keys[index], "vector": vector, "owner_user_id": user_id if index == 0 else None} for index, vector in zip(batch, vectors)]
-        await repo.store_vectors(session, values)
+        buffered_values.extend(values)
         cached.update({v["cache_key"]: v["vector"] for v in values})
-    return [cosine(cached[keys[0]], cached[key]) for key in keys[1:]]
+        if len(buffered_values) >= 200:
+            await repo.store_vectors(session, buffered_values)
+            buffered_values = []
+    if buffered_values:
+        await repo.store_vectors(session, buffered_values)
+
+    candidate_vec = np.array(cached[keys[0]], dtype=np.float32)
+    job_matrix = np.array([cached[key] for key in keys[1:]], dtype=np.float32)
+    c_norm = np.linalg.norm(candidate_vec)
+    if c_norm > 0:
+        candidate_vec /= c_norm
+    j_norms = np.linalg.norm(job_matrix, axis=1, keepdims=True)
+    j_norms[j_norms == 0] = 1.0
+    job_matrix /= j_norms
+    return np.dot(job_matrix, candidate_vec).clip(0.0, 1.0).tolist()
 
 
 def to_data(row, job) -> MatchData:
@@ -47,7 +64,7 @@ def to_data(row, job) -> MatchData:
                      explanation=row.explanation_payload, created_at=row.created_at)
 
 
-async def generate(session: AsyncSession, user_id: UUID, method: str, *, checkpoint=None) -> MatchPage:
+async def generate(session: AsyncSession, user_id: UUID, method: str = "sbert", *, checkpoint=None) -> MatchPage:
     profile = await get_profile(session, user_id=user_id)
     if not candidate_text(profile).strip():
         raise AppError("MISSING_REQUIRED_FIELD", "Add skills, experience or preferred roles before matching.", 422)
@@ -86,12 +103,11 @@ async def generate(session: AsyncSession, user_id: UUID, method: str, *, checkpo
 
 async def list_matches(session: AsyncSession, user_id: UUID, method: str, limit: int = 20, offset: int = 0) -> MatchPage:
     profile = await get_profile(session, user_id=user_id)
-    rows = await repo.user_matches(session, user_id, method)
     fingerprint = await job_repo.inventory_fingerprint(session)
     signature = config_identity(load_config())
-    fresh = [row for row in rows if row.profile_version == profile.version and row.inventory_hash == fingerprint and row.ranking_config_version == signature]
-    results = [to_data(row, await job_repo.get_by_id(session, row.job_id)) for row in fresh[offset:offset + limit]]
-    return MatchPage(matches=results, total=len(fresh), limit=limit, offset=offset, method=method, stale=len(fresh) != len(rows))
+    rows, total, stale = await repo.match_page(session, user_id, method, profile.version, fingerprint, signature, limit, offset)
+    return MatchPage(matches=[to_data(row, job) for row, job in rows], total=total,
+                     limit=limit, offset=offset, method=method, stale=stale)
 
 
 async def detail(session: AsyncSession, user_id: UUID, match_id: UUID) -> MatchData:

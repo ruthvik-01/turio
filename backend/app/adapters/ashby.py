@@ -5,19 +5,74 @@ performs only explicit inspected-control operations on the reviewed snapshot.
 """
 
 import asyncio
+import copy
 import logging
 import os
+import json
+import base64
+import re
+import subprocess
 import sys
+import threading
 from contextlib import asynccontextmanager
+from functools import wraps
 from urllib.parse import urlparse
 
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.ml.scoring import digest
 from app.adapters.native_submission import FileProof, SubmissionPermit
+from app.adapters import ashby_hosted
+from app.adapters import hosted_submission
 
 logger = logging.getLogger(__name__)
 
+
+def browser_operation(operation):
+    """Windows: browser subprocesses need Proactor; psycopg needs Selector."""
+    @wraps(operation)
+    async def dispatch(self, *args, **kwargs):
+        owner = asyncio.get_running_loop()
+        if sys.platform != "win32" or not isinstance(owner, asyncio.SelectorEventLoop):
+            return await operation(self, *args, **kwargs)
+        adapter = copy.copy(self)
+        def bridge(callback):
+            if callback is None:
+                return None
+            async def invoke(*values):
+                future = asyncio.run_coroutine_threadsafe(callback(*values), owner)
+                return await asyncio.wrap_future(future)
+            return invoke
+        adapter.load_resume = bridge(self.load_resume)
+        adapter.authorize = bridge(self.authorize)
+        cancelled, running = threading.Event(), []
+        async def execute():
+            running.append((asyncio.get_running_loop(), asyncio.current_task()))
+            if cancelled.is_set():
+                raise asyncio.CancelledError
+            return await operation(adapter, *args, **kwargs)
+        def run():
+            with asyncio.Runner(loop_factory=asyncio.ProactorEventLoop) as runner:
+                return runner.run(execute())
+        worker = asyncio.create_task(asyncio.to_thread(run))
+        try:
+            return await asyncio.shield(worker)
+        except asyncio.CancelledError:
+            cancelled.set()
+            if running:
+                loop, task = running[0]
+                try:
+                    loop.call_soon_threadsafe(task.cancel)
+                except RuntimeError:
+                    pass  # The browser operation already finished.
+            try:
+                await asyncio.shield(worker)
+            except (asyncio.CancelledError, Exception):
+                pass
+            raise
+    return dispatch
+
+# Historical discovery trial tags; eligibility now follows the Ashby URL boundary.
 TRIAL_COMPANIES = {"1password", "linear", "supabase", "vercel", "notion"}
 CONFIRMATION = r"application (has been )?(submitted|received)|thank you for applying"
 
@@ -54,7 +109,8 @@ INSPECT_FORM = r"""() => {
     fields.push({field_key: el.id || el.name, label: label.replace(/\s*\*\s*$/, '').trim(),
       name: el.name, checkbox_value: type === 'checkbox' ? el.value : null,
       input_type: type, required: el.required || el.getAttribute('aria-required') === 'true',
-      source_locator: locator, options: type === 'select' ? [...el.options].filter(o => o.value).map(o => ({value: o.value, label: o.text})) : []});
+      source_locator: locator, options: type === 'select' ? [...el.options].filter(o => o.value).map(o => ({value: o.value, label: o.text})) : [],
+      help_text: [el.getAttribute('placeholder'), ...(el.getAttribute('aria-describedby') || '').split(/\s+/).map(id=>document.getElementById(id)?.textContent)].filter(Boolean).join(' ').trim() || null});
   }
   if (fields.length === 0 || fields.length > 100 || new Set(fields.map(f => f.name)).size !== fields.length ||
       (b.name && fields.some(f => f.name === b.name)))
@@ -87,9 +143,12 @@ class AshbyAdapter:
             port = parts.port
         except ValueError as exc:
             raise AppError("UNSUPPORTED_APPLICATION", "The application URL is invalid.", 422) from exc
-        company = parts.path.strip("/").split("/")[0].casefold()
-        if parts.scheme != "https" or parts.hostname != "jobs.ashbyhq.com" or port not in {None, 443} or parts.username or parts.password or company not in TRIAL_COMPANIES:
-            raise AppError("UNSUPPORTED_APPLICATION", "This URL is outside the experimental Ashby trial allowlist. Continue manually.", 422)
+        path = parts.path.strip("/").split("/")
+        if (parts.scheme != "https" or parts.hostname != "jobs.ashbyhq.com" or port not in {None, 443}
+            or parts.username or parts.password or len(path) not in {2, 3}
+            or any(not re.fullmatch(r"[a-zA-Z0-9_-]+", part) for part in path)
+            or len(path) == 3 and path[-1] != "application"):
+            raise AppError("UNSUPPORTED_APPLICATION", "Browser preparation supports HTTPS Ashby job postings. Open other employer sites manually.", 422)
 
     @asynccontextmanager
     async def page(self, url):
@@ -115,15 +174,23 @@ class AshbyAdapter:
                 context = await connection.new_context(service_workers="block", accept_downloads=False)
                 page = await context.new_page()
                 page.set_default_timeout(15000)
-                allowed = {"jobs.ashbyhq.com", "app.ashbyhq.com", "assets.ashbyhq.com", "fonts.googleapis.com", "fonts.gstatic.com"}
+                allowed = {"jobs.ashbyhq.com", "app.ashbyhq.com", "assets.ashbyhq.com", "cdn.ashbyprd.com", "fonts.googleapis.com", "fonts.gstatic.com"}
                 gate = {"approved": False, "sealed": False, "permit": None,
                         "authorize": None, "lock": asyncio.Lock()}
 
                 async def guard(route):
                     request = route.request
                     parsed = urlparse(request.url)
-                    if parsed.scheme != "https" or parsed.hostname not in allowed or parsed.username or parsed.password or parsed.port not in {None, 443}:
+                    permit = gate["permit"]
+                    upload = bool(gate["approved"] and permit and getattr(permit, "external_upload", False) and request.url == permit.action)
+                    captcha = bool(gate.get("hosted") and gate["approved"] and hosted_submission.recaptcha_request(request))
+                    if parsed.scheme != "https" or (parsed.hostname not in allowed and not upload and not captcha) or parsed.username or parsed.password or parsed.port not in {None, 443}:
                         await route.abort()
+                    elif captcha:
+                        await gate["authorize"]()
+                        await route.fallback()
+                    elif not gate["sealed"] and ashby_hosted.public_read(request, url):
+                        await route.fallback()
                     elif request.method not in {"GET", "HEAD", "OPTIONS"}:
                         async with gate["lock"]:
                             permit = gate["permit"]
@@ -135,7 +202,10 @@ class AshbyAdapter:
                                     permit.rejected = True
                                     allowed_post = False
                             else:
-                                if permit and gate["approved"]:
+                                # A blocked later request cannot undo an already
+                                # accepted form-state RPC. Keep it blocked; final
+                                # submission and file-upload permits stay strict.
+                                if permit and gate["approved"] and not (type(permit) is hosted_submission.JsonPermit and permit.consumed):
                                     permit.rejected = True
                                 allowed_post = False
                             if allowed_post:
@@ -158,6 +228,7 @@ class AshbyAdapter:
                 async def block_websocket(websocket):
                     await websocket.close()
                 await context.route_web_socket("**/*", block_websocket)
+                ashby_hosted.bind_metadata(page, url)
                 await page.goto(url, wait_until="domcontentloaded")
                 yield page, gate
         except AppError:
@@ -181,6 +252,22 @@ class AshbyAdapter:
                     raise AppError("BROWSER_ACTION_FAILED", "Browser cleanup failed; no successful operation is claimed.", 503)
 
     async def schema(self, page):
+        buttons = asyncio.create_task(page.wait_for_function("""() => [...document.querySelectorAll('button,input[type="submit"]')].some(b =>
+            (b.offsetWidth || b.offsetHeight) && /^(submit application|submit)$/i.test((b.innerText || b.value || '').trim()))"""))
+        metadata = asyncio.create_task(page._turio_metadata_ready.wait()) if hasattr(page, "_turio_metadata_ready") else None
+        try:
+            if metadata:
+                await asyncio.wait({buttons, metadata}, return_when=asyncio.FIRST_COMPLETED)
+            ashby_hosted.require_available(page)
+            await buttons
+        finally:
+            for task in (buttons, metadata):
+                if task and not task.done():
+                    task.cancel()
+            await asyncio.gather(*(t for t in (buttons, metadata) if t), return_exceptions=True)
+        native = await page.evaluate("""() => [...document.querySelectorAll('button,input[type="submit"]')].some(b => b.form && /^(submit application|submit)$/i.test((b.innerText || b.value || '').trim()))""")
+        if not native:
+            return await ashby_hosted.schema(page)
         result = await page.evaluate(INSPECT_FORM)
         if result.get("error"):
             raise AppError("UNSUPPORTED_APPLICATION", result["error"], 422)
@@ -191,9 +278,55 @@ class AshbyAdapter:
             raise AppError("UNSUPPORTED_APPLICATION", "The form submits to a different company.", 422)
         return result
 
+    @browser_operation
     async def inspect(self, url):
         async with self.page(url) as (page, _):
             return await self.schema(page)
+
+    async def handoff(self, url, snapshot):
+        """Open a separate visible browser only after approval; never click submit."""
+        self.check_url(url)
+        if snapshot["schema"].get("version") != ashby_hosted.VERSION or not getattr(self, "authorize_handoff", None):
+            raise AppError("SUBMISSION_NOT_APPROVED", "No approved manual browser handoff is configured.", 409)
+        resume = None
+        file_values = [snapshot["answers"].get(f["field_key"]) for f in snapshot["schema"]["fields"] if f["input_type"] == "file"]
+        for value in file_values:
+            if value and value != snapshot["resume_id"]:
+                raise AppError("FORBIDDEN", "Only the reviewed original resume can be uploaded.", 403)
+        if any(file_values):
+            name, content = await self.load_resume(snapshot["resume_id"])
+            resume = {"name": name, "buffer": base64.b64encode(content).decode()}
+        await self.authorize_handoff(snapshot)
+        payload = json.dumps({"url": url, "snapshot": snapshot, "resume": resume}).encode() + b"\n"
+        process = subprocess.Popen([sys.executable, "-m", "app.adapters.ashby_handoff"],
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+            start_new_session=sys.platform != "win32")
+        try:
+            def bootstrap():
+                process.stdin.write(payload)
+                process.stdin.flush()
+                return process.stdout.readline()
+            response = await asyncio.wait_for(asyncio.to_thread(bootstrap), get_settings().browser_timeout_seconds + 10)
+            result = json.loads(response)
+            if result.get("inspected"):
+                # Bootstrap can take seconds: refresh ownership/profile before releasing data.
+                await self.authorize_handoff(snapshot)
+                process.stdin.write(b"fill\n")
+                process.stdin.close()
+                response = await asyncio.wait_for(asyncio.to_thread(process.stdout.readline), get_settings().browser_timeout_seconds + 10)
+                result = json.loads(response)
+            if not result.get("ready"):
+                raise AppError(result.get("code", "BROWSER_ACTION_FAILED"), result.get("message", "The browser could not be opened."), 503)
+            return result
+        except BaseException:
+            process.kill()
+            await asyncio.to_thread(process.wait)
+            raise
+        finally:
+            if not process.stdin.closed:
+                process.stdin.close()
+            process.stdout.close()
 
     async def verify_values(self, page, snapshot, observed, files):
         for field in observed["fields"]:
@@ -223,7 +356,14 @@ class AshbyAdapter:
             raise AppError("CONFLICT", "The review contains unknown fields.", 409)
         gate["sealed"] = True
         fields, files = {}, {}
+        omitted = set()
         for field in observed["fields"]:
+            if not field["required"] and field["field_key"] not in snapshot["answers"]:
+                # Disabled controls are absent from native FormData, including
+                # nonblank defaults the user has not reviewed.
+                await page.locator(field["source_locator"]).evaluate("el => el.disabled = true")
+                omitted.add(field["field_key"])
+                continue
             value = snapshot["answers"].get(field["field_key"])
             if field["required"] and (value is None or value == "" or (field["input_type"] == "checkbox" and value is not True)):
                 raise AppError("MISSING_REQUIRED_FIELD", "A required field has no approved value.", 422)
@@ -262,6 +402,11 @@ class AshbyAdapter:
                 except Exception:
                     if attempt == 2:
                         raise
+        if omitted:
+            expected = {**observed, "fields": [f for f in observed["fields"] if f["field_key"] not in omitted]}
+            observed = await self.schema(page)
+            if digest(observed) != digest(expected):
+                raise AppError("CONFLICT", "The employer form changed while skipping optional fields.", 409)
         await self.verify_values(page, snapshot, observed, files)
         valid = await page.locator(observed["submit_locator"]).evaluate("(button) => button.form.checkValidity()")
         if not valid:
@@ -270,14 +415,18 @@ class AshbyAdapter:
             fields[observed["submit_name"]] = observed["submit_value"]
         return observed, SubmissionPermit(observed["form_action"], fields, files)
 
+    @browser_operation
     async def fill(self, url, snapshot):
         async with self.page(url) as (page, gate):
             await self.fill_page(page, snapshot, gate)
 
+    @browser_operation
     async def submit(self, url, snapshot):
         if self.authorize is None:
             raise AppError("SUBMISSION_NOT_APPROVED", "No submission authorization boundary is configured.", 409)
         async with self.page(url) as (page, gate):
+            if snapshot["schema"].get("version") == ashby_hosted.VERSION:
+                return await hosted_submission.submit(self, page, gate, url, snapshot)
             observed, permit = await self.fill_page(page, snapshot, gate)
             before = await page.locator("body").inner_text()
             successful_posts = []

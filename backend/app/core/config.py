@@ -2,9 +2,10 @@
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 
 
 class Settings(BaseSettings):
@@ -41,9 +42,22 @@ class Settings(BaseSettings):
     model_cache_path: str = str(Path(__file__).resolve().parents[2] / ".model-cache")
     model_local_files_only: bool = True
     browser_automation_enabled: bool = False
+    jev_enabled: bool = False
+    assistance_provider: Literal["typesafe", "openrouter"] = "typesafe"
+    typesafe_api_key: SecretStr = Field(default=SecretStr(""), repr=False, exclude=True)
+    jev_model: Literal["jev-1.13.0"] = "jev-1.13.0"
     browser_headless: bool = True
     browser_executable_path: str | None = None
     browser_timeout_seconds: int = 90
+    browser_agent_primary_provider: Literal["openrouter", "bedrock_mantle"] = "openrouter"
+    browser_agent_fallback_provider: Literal["openrouter", "bedrock_mantle", "none"] = "bedrock_mantle"
+    openrouter_api_key: SecretStr = Field(default=SecretStr(""), repr=False, exclude=True)
+    openrouter_model: str = ""
+    bedrock_mantle_api_key: SecretStr = Field(default=SecretStr(""), repr=False, exclude=True)
+    bedrock_mantle_model: str = ""
+    bedrock_mantle_region: str = ""
+    browser_agent_llm_timeout_seconds: int = Field(default=60, ge=5, le=180)
+    browser_agent_max_output_tokens: int = Field(default=4096, ge=256, le=16384)
     worker_poll_seconds: float = Field(default=1.0, ge=0.05, le=60)
     worker_lease_seconds: int = Field(default=60, ge=15, le=3600)
     rate_limits_enabled: bool = True

@@ -39,7 +39,7 @@ async def main(url, output, application_fixture=False):
         await page.get_by_role("button", name="Create account").click()
         await page.wait_for_url("**/onboarding")
         await page.get_by_label("Choose PDF resume").set_input_files({"name": "fixture.pdf", "mimeType": "application/pdf", "buffer": build_pdf(RESUME_TEXT)})
-        await page.get_by_role("button", name="Upload & extract").click()
+        await page.get_by_role("button", name="Upload resume", exact=True).click()
         await page.get_by_text("Resume extracted. Check and correct the details below.", exact=True).wait_for()
         await page.get_by_label("Full name", exact=True).fill("UI Test Candidate")
         await page.get_by_label("Preferred roles", exact=False).fill("Python engineer")

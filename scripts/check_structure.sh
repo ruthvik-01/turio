@@ -27,7 +27,6 @@ required_dirs=(
   experiments
   docs
   scripts
-  docker
   alembic
   alembic/versions
 )
@@ -36,7 +35,7 @@ required_files=(
   README.md
   .env.example
   .gitignore
-  docker-compose.yml
+  scripts/start-local-stack.ps1
   alembic.ini
 )
 

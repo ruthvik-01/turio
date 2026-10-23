@@ -1,0 +1,71 @@
+{
+  "date": "2026-10-13",
+  "project": "D:/College/4-2 project",
+  "scope": "Resume/profile and confirmed-answer reuse, missing-only prompts and bulk preparation; no real employer fill/upload/submission",
+  "backend": {
+    "postgresql": {
+      "passed": 47,
+      "seconds": 29.22,
+      "log": ".verification/answer-reuse-postgres-final.log"
+    },
+    "hosted_handoff_recovery": {
+      "passed": 22,
+      "seconds": 11.16,
+      "log": ".verification/answer-reuse-handoff.log"
+    },
+    "resume_profile_and_application_checkpoint": {
+      "passed": 67,
+      "seconds": 23.5,
+      "log": ".verification/answer-reuse-backend.log",
+      "note": "Before final consent and precedence additions; current application changes covered by PostgreSQL checks."
+    }
+  },
+  "frontend": {
+    "production_build": "passed",
+    "build_log": ".verification/answer-reuse-build-final.log",
+    "live_ui": {
+      "checks": [
+        "known fields hidden, typed answers persist by default, summary edit, individual approval and mobile layout",
+        "bulk sequential preparation, partial failure, same-key retry, existing application reuse, result links and mobile layout",
+        "reselect reads current application state and preserves an existing review",
+        "bulk permission decline, select visible, stop after current job and resume remaining selection"
+      ],
+      "failures": [],
+      "api_requests_intercepted": 35,
+      "unexpected_requests": [],
+      "page_errors": []
+    },
+    "prior_application_ui_checks": 8,
+    "prior_jev_ui_groups": 4,
+    "artifacts": [
+      ".verification/answer-reuse-live-ui/answers-mobile.png",
+      ".verification/answer-reuse-live-ui/bulk-mobile.png"
+    ]
+  },
+  "runtime": {
+    "frontend": "http://127.0.0.1:13000",
+    "api": "http://127.0.0.1:18080",
+    "health": "API/database ok; frontend login 200",
+    "save_for_reuse_default": true,
+    "reuse_existing_default": false,
+    "leftover_test_schemas": 0,
+    "temporary_preview": "stopped",
+    "storage_database_worker": "existing services retained"
+  },
+  "review": {
+    "read_only_reviewer": "review_answer_reuse",
+    "findings_resolved": [
+      "cached bulk status invalidating current reviews",
+      "required consent optional-to-required historical reuse"
+    ],
+    "historical_fallback_limit": "Authored historical answers lack independent timestamps; fallback uses application update order. Explicit profile and SavedAnswer values take precedence."
+  },
+  "history": "D:/Projects/Sessions/13-10-2026/turio-answer-reuse-bulk.md",
+  "limitations": [
+    "Bulk preparation is sequential; keep Jobs page open. Completed applications persist in tracker.",
+    "AI suggestions require explicit confirmation and do not enter general answer reuse.",
+    "Each employer form retains individual final review/approval; required form consent remains per application.",
+    "No full backend suite rerun; focused regression/PostgreSQL/browser/UI gates listed above."
+  ],
+  "git": "Existing changes preserved; no commit or push."
+}

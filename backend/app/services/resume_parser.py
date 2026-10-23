@@ -24,6 +24,7 @@ SECTION_ALIASES: dict[str, set[str]] = {
         "employment",
         "employment history",
         "work history",
+        "internship", "internships", "internship experience",
     },
     "education": {"education", "academics", "academic background", "qualifications"},
     "skills": {
@@ -33,12 +34,17 @@ SECTION_ALIASES: dict[str, set[str]] = {
         "technologies",
         "technical proficiencies",
     },
-    "projects": {"projects", "personal projects", "selected projects", "side projects"},
+    "projects": {"projects", "personal projects", "selected projects", "side projects",
+                 "academic projects", "technical projects", "key projects"},
+    "certifications": {"certifications", "certification", "certificates", "credentials", "licenses", "licenses and certifications"},
+    "achievements": {"achievements", "achievement", "awards", "honors", "honours", "awards and achievements"},
+    "other": {"interests", "languages", "references", "publications"},
 }
 
 _ALIAS_TO_SECTION = {
     alias: section for section, aliases in SECTION_ALIASES.items() for alias in aliases
 }
+_COMPACT_ALIAS_TO_SECTION = {"".join(alias.split()): section for alias, section in _ALIAS_TO_SECTION.items()}
 
 # A heading is a short line whose text is exactly one of the known aliases.
 _MAX_HEADING_LENGTH = 40
@@ -80,11 +86,15 @@ _PRESENT = re.compile(r"\b(present|current|now|ongoing)\b", re.IGNORECASE)
 
 _EMAIL = re.compile(r"[\w.+-]+@[\w-]+\.[\w.-]+")
 _PHONE = re.compile(r"(?:\+?\d[\d\s().-]{7,}\d)")
-_URL = re.compile(r"https?://[^\s,;)]+|(?:www\.)[^\s,;)]+", re.IGNORECASE)
+_URL = re.compile(r"https?://[^\s,;)]+|(?:www\.)[^\s,;)]+|(?<![\w@./-])(?:linkedin\.com/in|github\.com)/[^\s,;)]+", re.IGNORECASE)
+_BARE_URL = re.compile(r"(?<![\w@./-])(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|me|dev|io|net|org|app|co|ai|in)\b(?:/[^\s,;)]+)?", re.I)
 
 # Words that look like a name line but are not one.
 _NAME_STOPWORDS = frozenset({"resume", "curriculum vitae", "cv", "bio", "profile"})
 _MAX_NAME_WORDS = 5
+_DECORATION = re.compile(r"^(?:last\s+updated\b.*|(?:.*?[-–—|]\s*)?page\s+\d+\s*(?:of|/)\s*\d+|\d+\s*/\s*\d+)\s*$", re.I)
+
+_DESCRIPTION_START = re.compile(r"^(?:built|designed|developed|implemented|engineered|architected|automated|optimized|created|deployed|integrated|managed|led|worked|contributed|collaborated)\b", re.I)
 
 
 @dataclass(frozen=True)
@@ -115,6 +125,10 @@ class ParsedProject:
 @dataclass(frozen=True)
 class ParsedResume:
     full_name: str | None = None
+    contact_email: str | None = None
+    summary: str | None = None
+    certifications: list[str] = field(default_factory=list)
+    achievements: list[str] = field(default_factory=list)
     phone: str | None = None
     location: str | None = None
     linkedin_url: str | None = None
@@ -132,24 +146,23 @@ def _normalize_heading(line: str) -> str:
 
 def _section_for(line: str) -> str | None:
     stripped = line.strip()
-    if not stripped or len(stripped) > _MAX_HEADING_LENGTH:
-        return None
     heading = _normalize_heading(stripped)
-    if heading in _ALIAS_TO_SECTION:
-        return _ALIAS_TO_SECTION[heading]
-    # "TECHNICAL SKILLS" and "Technical Skills" are headings; a sentence that
-    # merely contains the word is not.
-    if stripped.isupper() and heading in _ALIAS_TO_SECTION:
-        return _ALIAS_TO_SECTION[heading]
-    return None
+    compact = "".join(heading.split())
+    if not compact or len(compact) > _MAX_HEADING_LENGTH:
+        return None
+    # Character-spaced typography may introduce spaces inside words. Only
+    # exact known aliases collapse; never rewrite source prose or offsets.
+    return _ALIAS_TO_SECTION.get(heading) or _COMPACT_ALIAS_TO_SECTION.get(compact)
 
 
-def split_sections(text: str) -> dict[str, list[str]]:
+def split_sections(text: str, heading_sections: dict[int, str] | None = None) -> dict[str, list[str]]:
     """Group the document's lines under the heading that precedes them."""
     sections: dict[str, list[str]] = {}
     current = "header"
-    for line in text.split("\n"):
-        section = _section_for(line)
+    for index, line in enumerate(text.split("\n")):
+        if _DECORATION.match(line.strip()) or re.fullmatch(r"\s*(?:\(cid:\d+\)|[\uf000-\uf8ff])+\s*", line):
+            continue
+        section = _section_for(line) or (heading_sections or {}).get(index)
         if section is not None:
             current = section
             sections.setdefault(current, [])
@@ -212,13 +225,27 @@ def _blocks(lines: list[str]) -> list[list[str]]:
 def _parse_skills(lines: list[str]) -> list[str]:
     skills: list[str] = []
     seen: set[str] = set()
-    for line in lines:
-        for token in _SKILL_SEPARATORS.split(_strip_bullet(line)):
+    grouped, categorized = [], False
+    category = re.compile(r"^[\w &/+-]{1,50}:\s*", re.I)
+    for raw in lines:
+        line = _strip_bullet(raw)
+        match = category.match(line)
+        if match:
+            grouped.append(line[match.end():]); categorized = True
+        elif line and categorized and not _BULLET_PREFIX.match(raw):
+            grouped[-1] += " " + line
+        else:
+            grouped.append(line); categorized = False
+    for line in grouped:
+        protected = re.sub(r"\bci/cd\b", lambda m: m.group().replace("/", "\x01"), line, flags=re.I)
+        protected = re.sub(r"\([^)]*\)", lambda m: m.group().replace(",", "\x02").replace(";", "\x03").replace("/", "\x01"), protected)
+        for token in _SKILL_SEPARATORS.split(protected):
+            token = token.replace("\x01", "/").replace("\x02", ",").replace("\x03", ";")
             name = token.strip(" .;:-")
             normalized = _normalize_skill(name)
             # A "skill" of one character or a whole sentence is a parsing
             # artefact, not a skill.
-            if len(normalized) < 2 or len(normalized) > 60 or normalized in seen:
+            if (len(normalized) < 2 and normalized not in {"c", "r"}) or len(normalized) > 60 or normalized in seen:
                 continue
             if not re.search(r"[a-z]", normalized):
                 continue
@@ -240,8 +267,10 @@ def _split_header_line(line: str) -> tuple[str | None, str | None]:
     without_dates = _PRESENT.sub(" ", without_dates)
     without_dates = re.sub(r"\b(?:19|20)\d{2}\b", " ", without_dates)
 
-    parts = [part.strip(" .-–—|") for part in re.split(r"\s*[|–—]\s*|\s+at\s+|\s*,\s*", without_dates)]
+    parts = [part.strip(" .-–—|\ufffd") for part in re.split(r"\s*[|–—\ufffd]\s*|\s+at\s+|\s+-\s+", without_dates)]
     parts = [part for part in parts if part]
+    if len(parts) < 2:
+        parts = [part.strip(" .-–—|\ufffd") for part in re.split(r"\s*,\s*", without_dates) if part.strip(" .-–—|\ufffd")]
     if len(parts) != 2:
         return None, None
 
@@ -256,10 +285,39 @@ def _split_header_line(line: str) -> tuple[str | None, str | None]:
 
 def _parse_experiences(lines: list[str]) -> list[ParsedExperience]:
     experiences: list[ParsedExperience] = []
-    for block in _blocks(lines):
+    def header(line):
+        cleaned = _strip_bullet(line)
+        title, company = _split_header_line(cleaned)
+        return bool(title and company and len(cleaned) <= 180 and not _DESCRIPTION_START.match(cleaned))
+    entries, current = [], []
+    if any(header(line) for line in lines):
+        seen_header = False
+        for index, line in enumerate(lines):
+            following = [v.strip() for v in lines[index + 1:index + 4] if v.strip()]
+            multiline_header = (index > 0 and not lines[index - 1].strip()
+                and bool(_TITLE_KEYWORDS & set(line.lower().split()))
+                and not _DESCRIPTION_START.match(line.strip()) and len(line.split()) <= 8
+                and len(following) >= 2 and (len(_dates_in(following[1])) >= 2
+                    or (bool(_dates_in(following[1])) and bool(re.search(r"\b(?:present|current|ongoing)\b", following[1], re.I)))))
+            if header(line) or multiline_header:
+                if current:
+                    entries.extend([current] if seen_header else _blocks(current))
+                current = [line]
+                seen_header = True
+            elif line.strip() or not seen_header:
+                current.append(line)
+        if current: entries.append(current)
+    else:
+        entries = _blocks(lines)
+    for block in entries:
         text = "\n".join(block)
         dates = _dates_in(text)
         title, company = _split_header_line(_strip_bullet(block[0]))
+        if not title and not company and len(block) > 1 and all(
+            len(line.strip()) <= 180 and not _DESCRIPTION_START.match(_strip_bullet(line)) for line in block[:2]):
+            # An explicitly separate company and role line has the same
+            # evidence as an inline header; preserve descriptions unchanged.
+            title, company = _split_header_line(" | ".join(_strip_bullet(line) for line in block[:2]))
         description_lines = [_strip_bullet(line) for line in block[1:] if line.strip()]
         experiences.append(
             ParsedExperience(
@@ -275,13 +333,36 @@ def _parse_experiences(lines: list[str]) -> list[ParsedExperience]:
 
 def _parse_educations(lines: list[str]) -> list[ParsedEducation]:
     educations: list[ParsedEducation] = []
-    for block in _blocks(lines):
+    degree_header = re.compile(r"^(?:b\.?\s*(?:tech|sc|e)\b|m\.?\s*(?:tech|sc)\b|mba\b|ph\.?d\b|bachelor\w*\b|master\w*\b|doctorate\b|diploma\b|(?:senior\s+)?secondary\b|high school\b)", re.I)
+    entries, current = [], []
+    if any(degree_header.match(_strip_bullet(line)) for line in lines):
+        has_degree = False
+        for index, line in enumerate(lines):
+            cleaned = _strip_bullet(line)
+            is_degree = bool(degree_header.match(cleaned))
+            following = next((v for v in lines[index + 1:] if v.strip()), "")
+            institution_first = (has_degree and index > 0 and not lines[index - 1].strip()
+                                 and bool(_INSTITUTION_KEYWORDS & set(re.findall(r"[a-z]+", cleaned.lower())))
+                                 and not is_degree and bool(degree_header.match(_strip_bullet(following))))
+            if current and ((is_degree and has_degree) or institution_first):
+                entries.append(current); current = []
+                has_degree = False
+            if line.strip(): current.append(line)
+            has_degree |= is_degree
+        if current: entries.append(current)
+    else:
+        entries = _blocks(lines)
+    for block in entries:
         text = " ".join(_strip_bullet(line) for line in block)
         lowered = text.lower()
         dates = _dates_in(text)
+        degree_line = next((_strip_bullet(line) for line in block if degree_header.match(_strip_bullet(line))), _strip_bullet(block[0]))
 
+        degree_line = _MONTH_YEAR.sub("", degree_line)
+        degree_line = _NUMERIC_MONTH_YEAR.sub("", degree_line)
+        degree_line = _YEAR_ONLY.sub("", degree_line).strip(" .-–—|")
         degree = next(
-            (part.strip() for part in re.split(r"\s*[|,–—]\s*", text)
+            (part.strip() for part in re.split(r"\s*[|,–—]\s*", degree_line)
              if _DEGREE_KEYWORDS & set(re.findall(r"[a-z.]+", part.lower()))),
             None,
         )
@@ -289,13 +370,20 @@ def _parse_educations(lines: list[str]) -> list[ParsedEducation]:
             # "B.Tech in Computer Science" -> the field is reported separately,
             # so the degree should not repeat it.
             degree = re.split(r"\s+in\s+", degree, maxsplit=1, flags=re.IGNORECASE)[0].strip()
-        institution = next(
-            (part.strip() for part in re.split(r"\s*[|,–—]\s*", text)
-             if _INSTITUTION_KEYWORDS & set(re.findall(r"[a-z]+", part.lower()))),
-            None,
-        )
-        field_match = re.search(r"\bin\s+([A-Z][\w\s&]{2,60}?)(?:[.,|]|$)", text)
-        field_name = field_match.group(1).strip() if field_match else None
+        school = re.match(r"(?i)^((?:Senior\s+)?Secondary\s*\([^)]*\)|High School)", degree_line)
+        if school: degree = school.group(1)
+        institution = next((part.strip() for line in block for part in re.split(r"\s*[|,–—]\s*", line)
+            if _INSTITUTION_KEYWORDS & set(re.findall(r"[a-z]+", part.lower())) and not degree_header.match(part.strip())), None)
+        if institution:
+            institution = _MONTH_YEAR.sub("", institution)
+            institution = _NUMERIC_MONTH_YEAR.sub("", institution)
+            institution = _YEAR_ONLY.sub("", institution).strip(" .-–—|")
+        field_match = re.search(r"\bin\s+([^|,]{2,100})", degree_line, re.I)
+        field_name = field_match.group(1).strip().rstrip(".") if field_match else None
+        if not field_name and degree:
+            header_parts = re.split(r"\s*[,|]\s*", degree_line)
+            if len(header_parts) > 1 and not school and not _INSTITUTION_KEYWORDS & set(re.findall(r"[a-z]+", header_parts[1].lower())):
+                field_name = header_parts[1].strip() or None
 
         # A single date on an education entry is conventionally the graduation
         # year, so it becomes end_date here rather than start_date. The value
@@ -322,13 +410,52 @@ def _parse_educations(lines: list[str]) -> list[ParsedEducation]:
 
 
 def _parse_projects(lines: list[str], skills: list[str]) -> list[ParsedProject]:
-    known = {_normalize_skill(skill) for skill in skills}
+    # Description bullets belong to their project, not to separate projects.
+    # PDF normalization discards indentation, so use blank separators and
+    # unbulleted/numbered headings rather than the generic entry splitter.
+    blocks: list[list[str]] = []
+    current: list[str] = []
+    separated = False
+    for index, line in enumerate(lines):
+        if not line.strip():
+            separated = True
+            continue
+        cleaned = _strip_bullet(line)
+        if re.fullmatch(r"\d+", cleaned):
+            continue  # Detached PDF hyperlink footnote marker, not a project.
+        following = next((v for v in lines[index + 1:] if v.strip() and not re.fullmatch(r"\d+", v.strip())), "")
+        numbered = bool(re.match(r"^\s*\d+[.)]\s+", line))
+        bullet = bool(_BULLET_PREFIX.match(line))
+        heading = (len(cleaned.split()) <= 10 and len(cleaned) <= 120 and not cleaned.endswith((".", "!", "?", ":", "-"))
+                   and not _DESCRIPTION_START.match(cleaned)
+                   and not re.match(r"(?i)^(technologies|tech stack|tools|stack)\s*:", cleaned))
+        if current and heading and (
+            numbered or (not bullet and (separated or _BULLET_PREFIX.match(following)
+                or (_DESCRIPTION_START.match(following.strip()) and current[-1].rstrip().endswith((".", "!", "?")))))
+        ):
+            blocks.append(current)
+            current = []
+        current.append(line)
+        separated = False
+    if current:
+        blocks.append(current)
     projects: list[ParsedProject] = []
-    for block in _blocks(lines):
-        name = _strip_bullet(block[0])
-        body = " ".join(_strip_bullet(line) for line in block[1:])
-        tokens = re.findall(r"[A-Za-z][\w.+#-]*", body)
-        technologies = sorted({token for token in tokens if _normalize_skill(token) in known})
+    for block in blocks:
+        name = re.split(r"\s+(?:https?://|www\.|github/|github\.com/)", _strip_bullet(block[0]), maxsplit=1)[0].strip()
+        body = "\n".join(_strip_bullet(line) for line in block[1:])
+        # Multiword skills and punctuation (Node.js, C++) must match intact.
+        # Only source-stated skills or explicitly labelled technology lists
+        # are extracted; nothing is inferred from a project's subject.
+        source = "\n".join(block)
+        technologies = [
+            skill for skill in skills
+            if re.search(r"(?<![\w+#])" + re.escape(skill) + r"(?![\w+#])", source, re.I)
+        ]
+        for line in block:
+            explicit = re.match(r"(?i)^(?:technologies|tech stack|tools|stack)\s*:\s*(.+)$", _strip_bullet(line))
+            if explicit:
+                technologies.extend(_parse_skills([explicit.group(1)]))
+        technologies = list({_normalize_skill(skill): skill for skill in technologies}.values())
         projects.append(
             ParsedProject(
                 name=name or None,
@@ -355,22 +482,39 @@ def _looks_like_location(segment: str) -> bool:
 
 
 def _extract_contact(header_lines: list[str], text: str) -> dict[str, str | None]:
-    urls = _URL.findall(text)
-    phone_match = _PHONE.search(text)
+    header = "\n".join(header_lines)
+    urls = [url if re.match(r"https?://", url, re.I) else "https://" + url for url in dict.fromkeys(_URL.findall(header) + _BARE_URL.findall(header))]
+    linkedin = next((url for url in urls if re.match(r"https?://(?:www\.)?linkedin\.com/in/[^/\s]+", url, re.I)), None)
+    if linkedin is None:
+        short = next((re.fullmatch(r"https?://(?:www\.)?linkedin\.com/([\w-]+)/?", url, re.I) for url in urls
+            if re.fullmatch(r"https?://(?:www\.)?linkedin\.com/([\w-]+)/?", url, re.I)), None)
+        handle = re.search(r"^\s*LinkedIn\s*:\s*@?([\w-]+)\s*$", header, re.I | re.M)
+        username = short.group(1) if short else handle.group(1) if handle else None
+        if username and username.casefold() not in {"in", "company", "jobs", "feed", "school", "learning"}:
+            linkedin = "https://www.linkedin.com/in/" + username
+    contact_source = re.sub(r"\(cid:\d+\)", "", _EMAIL.sub("", _URL.sub("", _BARE_URL.sub("", header))))
+    phone_match = next((match for match in _PHONE.finditer(contact_source)
+        if 8 <= len(re.sub(r"\D", "", match.group())) <= 15), None)
+    email_match = _EMAIL.search(header)
 
     # Contact details are usually packed onto one line, so the location is
     # looked for in the pieces rather than in the whole line.
     segments = [
         part.strip()
         for line in header_lines
-        for part in re.split(r"\s*[|•·]\s*", line)
+        for part in re.split(r"\s*[|•·#]\s*|\(cid:\d+\)", line)
     ]
     location = next((segment for segment in segments if _looks_like_location(segment)), None)
+    if location is None:
+        # Explicit marker supplied by some icon-font resumes, not a bare name.
+        location = next((segment[1:].strip() for segment in segments if segment.startswith("+ ")
+            and not re.search(r"\d|@|https?://", segment) and 1 < len(segment.split()) <= 6), None)
 
     return {
+        "contact_email": email_match.group(0).strip() if email_match else None,
         "phone": phone_match.group(0).strip() if phone_match else None,
         "location": location,
-        "linkedin_url": next((url for url in urls if "linkedin.com" in url.lower()), None),
+        "linkedin_url": linkedin,
         "github_url": next((url for url in urls if "github.com" in url.lower()), None),
         "portfolio_url": next(
             (
@@ -396,21 +540,40 @@ def _extract_name(header_lines: list[str]) -> str | None:
         if (
             1 < len(words) <= _MAX_NAME_WORDS
             and not any(char.isdigit() for char in candidate)
-            and all(part.strip(".,'-").isalpha() for part in words)
+            and all(re.sub(r"[.,'’\-]", "", part).isalpha() for part in words)
         ):
             return candidate
-        return None
     return None
 
 
-def parse_resume(text: str) -> ParsedResume:
-    sections = split_sections(text)
+def _parse_supplemental(lines: list[str]) -> list[str]:
+    entries, separated = [], True
+    for line in lines:
+        if not line.strip():
+            separated = True
+            continue
+        value = _strip_bullet(line)
+        if entries and not separated and not _BULLET_PREFIX.match(line) and (
+            value[:1].islower() or entries[-1].endswith("-")):
+            entries[-1] += " " + value
+        else:
+            entries.append(value)
+        separated = False
+    return list(dict.fromkeys(entries))
+
+
+def parse_resume(text: str, heading_sections: dict[int, str] | None = None) -> ParsedResume:
+    sections = split_sections(text, heading_sections)
     header_lines = sections.get("header", [])
     contact = _extract_contact(header_lines, text)
     skills = _parse_skills(sections.get("skills", []))
 
     return ParsedResume(
         full_name=_extract_name(header_lines),
+        contact_email=contact["contact_email"],
+        summary="\n".join(line.strip() for line in sections.get("summary", []) if line.strip()) or None,
+        certifications=_parse_supplemental(sections.get("certifications", [])),
+        achievements=_parse_supplemental(sections.get("achievements", [])),
         phone=contact["phone"],
         location=contact["location"],
         linkedin_url=contact["linkedin_url"],

@@ -16,6 +16,20 @@ Upload
 → Persist verified profile
 ```
 
+Current ingestion extracts and validates locally before object/profile persistence;
+`rules-v6-heading-spacing` retains positional row/column/page order, recognizes
+exact known letter-spaced heading aliases, preserves grouped skill qualifiers
+and multiline role/company evidence, filters decorations
+and repeated headers, and copies source-stated supplemental facts. No fixed
+resume template or Google service. Bounded unreadable text pages fail safely;
+scanned images need searchable text supplied outside this pipeline.
+
+Optional Jev Choice assistance classifies unfamiliar headings from bounded
+source excerpts with per-action consent, never PDF bytes. Suggestions are not
+automatically persisted: accept into the editor and save with the expected
+profile version. Account email and sensitive declarations are not inferred.
+Evidence: `evidence/resume-layouts-2026-10-13.json`; ADR-044.
+
 ## 2. Job pipeline
 
 ```text

@@ -108,12 +108,15 @@ after extraction.
 
 Failures:
 
-- `415 INVALID_RESUME` — not a PDF, encrypted, empty, or unreadable as a PDF.
-- `413 INVALID_RESUME` — larger than the configured limit (5 MB by default).
+- `415 INVALID_RESUME` — not a PDF, password-protected, empty, unreadable, or a page lacks searchable text. Image OCR is unsupported; saved profile values are not replaced on rejection.
+- `413 INVALID_RESUME` — larger than the configured limit (5 MB by default), over 30 pages or over 200,000 extracted characters.
 - `503 OBJECT_STORAGE_UNAVAILABLE` — the file could not be stored.
 
-Extraction fills `full_name`, `phone`, `location`, the three profile URLs, and
-the skills/experiences/educations/projects sets. It never fills
+Extraction fills `full_name`, `contact_email`, `summary`, `phone`, `location`,
+the three profile URLs, certifications/achievements and the
+skills/experiences/educations/projects sets. Application email uses the editable
+`contact_email` before the account email; login email is unchanged. Supplemental
+columns are nullable for existing rows (ADR-044). It never fills
 `work_authorization_status` or `sponsorship_required`: those are collected
 explicitly, because deriving them from a document would be fabricating a legal
 declaration (`CLAUDE.md` section 9).
@@ -128,7 +131,9 @@ projects. Creates an empty profile on first call rather than 404ing.
 ### PATCH `/api/v1/profiles/me`
 Apply user-confirmed corrections. Partial: only fields present in the body are
 applied, so an explicit `null` clears a field while omitting it leaves the
-stored value alone.
+stored value alone. `contact_email` must be a valid email (max 255 characters);
+`summary` is at most 10,000 characters. `certifications` and `achievements` are
+nullable string lists, at most 100 entries of 1–2,000 characters each.
 
 Replacing an entity set (`skills`, `experiences`, `educations`, `projects`)
 replaces it wholesale — the submitted list becomes the complete set. Sets not
@@ -301,15 +306,16 @@ A replay of the same valid request must return the previously committed result r
 - `POST /matches`: `{ "method": "keyword" | "tfidf" | "sbert" }`; defaults to the explicitly labeled keyword baseline. Returns a first page of results. SBERT unavailability returns `503 MODEL_UNAVAILABLE`, never a silent fallback.
 - `GET /matches`: `method`, `limit` (1–100), `offset`; includes `stale`. Stale profile/inventory/config results are withheld. Match detail returns `409 CONFLICT` when stale.
 - Match output contains job metadata, method/model revision, profile/config versions, final score and evidence. Unknown structured signals remain null and active weights are renormalized.
-- `POST /applications`: `{ "job_id": UUID, "resume_id": UUID? }`, required `Idempotency-Key`. Omitted resume selects the caller's latest stored resume, if any.
+- `POST /applications`: `{ "job_id": UUID, "resume_id": UUID?, "reuse_existing": boolean? }`, required `Idempotency-Key`. Omitted resume selects the caller's latest stored resume, if any. `reuse_existing: true` returns the caller's latest non-cancelled application for that job without resetting its review; a different explicitly selected resume returns 409.
 - `GET /applications`: `status`, `outcome`, `limit`, `offset`, owner-scoped.
 - `GET /applications/summary`: owner-scoped counts plus 28 UTC dates/counts for the dashboard.
+- `GET /applications/{id}/capability`: owner-scoped `{ available, reason }` using the adapter's existing configuration/URL checks. Does not launch a browser, mutate an application, or certify live-company compatibility.
 - `POST /applications/{id}/start`: inspect and map through the optional adapter. Disabled/unsupported assistance fails explicitly. It never submits.
-- `POST /applications/{id}/answers`: `{ "answers": [{ "field_id": UUID, "value": string|boolean|null, "user_confirmed": boolean, "save_for_reuse": boolean }] }`, required `Idempotency-Key`. Profile-derived facts must be edited in the profile rather than overridden here.
+- `POST /applications/{id}/answers`: `{ "answers": [{ "field_id": UUID, "value": string|boolean|null, "user_confirmed": boolean, "save_for_reuse": boolean }] }`, required `Idempotency-Key`. `save_for_reuse` defaults to true for confirmed authored answers; false keeps answers application-only. Confirmed reusable contact facts also update the matching profile attribute and increment its version when changed; other drafts must prepare with the new profile before submission. Custom answers require the same question, control and options. AI suggestions and required form-consent checkboxes are excluded. Profile-derived answers may be overridden; the UI defaults those edits to application-only. Local overrides survive preparation only for the same field key, normalized label, control and options, including explicit empty values.
 - `POST /applications/{id}/fields/{field_id}/draft`: factual, template-based starter for permitted narrative textareas. Always unconfirmed; sensitive questions are excluded.
 - `POST /applications/{id}/review`: fill/validate without submission and produce a review token bound to the schema, answers, resume, profile version and application revision.
 - `POST /applications/{id}/approve-submit`: `{ "approved": true, "review_token": string }`, required `Idempotency-Key`. Review expires after 15 minutes. Persisted submission intent precedes the external action; ambiguous outcomes are `verification_failed`, never automatically retried.
-- `PATCH /applications/{id}`: optional `notes`, `outcome`, `cancel`, `submitted_manually`. Manual submission is explicitly labeled `submission_method: "manual"`, not claimed as a browser-verified result.
+- `PATCH /applications/{id}`: optional `notes`, `outcome`, `cancel`, `submitted_manually`, `reset_to_review`, `confirmed_not_submitted`. Manual submission is explicitly labeled `submission_method: "manual"`, not claimed as a browser-verified result. Reset requires status `verification_failed` and explicit `confirmed_not_submitted: true` after the applicant checks the employer site; it clears the prior review/approval and returns to `needs_input` or `ready_for_review` without submitting. Cancellation, manual submission and reset are mutually exclusive.
 - Boundary validation returns `422 INVALID_REQUEST` with the standard envelope and without echoing submitted credential/answer values.
 
 The Next.js `/api/...` proxy preserves these APIs while keeping tokens in
@@ -406,3 +412,137 @@ as `stapply-company-inventory.json`; missing/invalid input returns
 
 Selection continues to use `GET /jobs?company=<canonical name>` combined with
 `q`, `location`, `ats`, `limit` and `offset`. Company and Platform are independent.
+
+## Opt-in Jev assistance — 2026-10-11
+
+All routes require authentication and the existing envelope.
+
+- `GET /api/v1/resumes/latest`: owner-only resume metadata, or `data: null`.
+- `POST /api/v1/resumes/{resume_id}/suggestions`: body `{ "consent": true }`.
+  Ownership precedes source access/work limits. Returns `resume_id`,
+  `resume_checksum`, `profile_version`, pinned `model`, `status`, `suggestions`,
+  `suggested_fields`, `overflow` and `unresolved`. Suggestions have stable `id`,
+  local `heading`, source `start/end`, `context_start/context_end`, local `excerpt`,
+  `section`, `confidence`, `winner_probability` and `uncertain`. Proposed section
+  facts may include experience/education/project/skill/summary/certification/
+  achievement interpretations, not contact/legal scalars. A fact decision uses
+  `section:role` (for example `experience:title`) with the same source-span and
+  confidence fields. All source lines in a section must resolve before its
+  model-grouped entity set replaces local proposals; partial sections retain
+  local/manual fallback. Heading and fact phases share one operation budget.
+  Current OpenRouter response includes actual `provider`/`model`; confidence and
+  winner probability are null (not fabricated), and proposals are uncertain.
+  Offered-choice JSON is validated; legacy numeric Jev responses remain compatible.
+  No profile mutation occurs.
+- `PATCH /api/v1/profiles/me`: optional positive `expected_profile_version`.
+  Compare under the mutation lock before scalar/entity edits; stale saves return
+  409 with no requested changes applied. Omitted versions remain compatible.
+- `POST /api/v1/applications/{id}/start`: optional `{ "ai_assist": false }`.
+  Bodyless calls remain deterministic; true opts into TypeSafe metadata transfer
+  for this preparation only, not submission.
+- Existing `/answers` items gain `jev_confirmed: false`. `jev_profile` answers
+  need an explicit true flag to confirm a new/edited value. Editing without it
+  clears confirmation. Their source persists and they never enter general saved
+  reuse. Stale profile/resume/form provenance returns 409 and requires preparation.
+
+Assistance defaults off. `unavailable` preserves local/manual processing;
+legacy textless stored PDFs return `ocr_needed`; new uploads with unreadable
+pages reject before profile replacement. Concurrent source changes return `stale`.
+Both paths consume shared work limits; rate/concurrency rejection is 429.
+Confidence is a decision statistic, not measured accuracy. `JEV_ASSISTANCE.md`
+documents configuration, privacy, validation and request/response limits.
+
+Application fields with Jev provenance expose `jev_confidence`,
+`jev_winner_probability` and `jev_uncertain`. Supported choices >=0.50 may be
+reviewed; confidence below 0.90 is explicitly uncertain and never implicitly
+confirmed. Authorization and submission approval rules remain unchanged.
+
+## OpenRouter provider — 2026-10-13
+`ASSISTANCE_PROVIDER=openrouter` selects the pinned free
+`dots-studio/dots-3-note-preview:free` model. Key is read server-side from root
+`.env` (`OPENROUTER_API_KEY` or `Open_Router`). Existing consent/API names,
+validation, field confirmation and bulk gates are retained; no paid or TypeSafe
+fallback. Unscored choices require review. Evidence:
+`evidence/openrouter-free-2026-10-13.json`.
+
+## Bulk modes — 2026-10-14
+No new bulk endpoint: the Jobs client reuses existing create/start/read/review/
+approve-submit routes. Review mode never submits automatically. Automatic mode
+starts with explicit selected-job run approval for stored confirmed information,
+then prepares/reviews/submits eligible jobs; prepared-value approval remains an
+alternative. Each final request binds job identity, profile/resume and field
+values. Changed, held, expired, unsupported-hosted or
+unconfirmed applications remain pending. Each submitted application still has
+its own fresh review token/idempotency key and backend approval checks. The batch
+approval lasts 15 minutes; uncertain final requests are not retried. Optional
+batch Jev consent applies only to employer metadata and resets per action.
+
+Saving reusable confirmed answers also updates equivalent fields in unreviewed
+owned pending drafts. Reviewed drafts retain their answers and tokens until
+explicit re-preparation loads current saved answers. Busy/terminal applications,
+explicit application-only answers, profile/AI values, files and required checkbox
+consent are protected. Busy drafts are skipped rather than waited on.
+Home recommendations use SQL counts/filtering/pagination instead of loading all
+match explanations. GET proxy requests are bounded to 15 seconds per attempt;
+the client allows 60 seconds for an authentication refresh/retry and retains
+rotated cookies on an upstream retry failure.
+
+### Stable application persistence — 2026-10-14
+
+`POST /applications/{id}/answers` accepts optional `expected_revision` (strict
+positive integer). One conditional application UPDATE reserves the revision;
+a stale save returns HTTP409 with `STALE_REVISION`. Successful batches increment
+the revision once and atomically commit answers, reusable values, contact profile
+changes, events and replay records. An identical completed idempotency request
+replays its original response even if its expected revision is now stale.
+Omitting expected_revision remains supported for older clients.
+
+Preparation upserts metadata by `(application_id, field_key)`, preserving surviving
+field IDs and compatible authored values. Disappeared controls and their answers
+are removed; incompatible/unmapped answers are cleared and current profile/AI
+provenance is still revalidated. Contact corrections lock only the existing
+profile. User-scoped serialization elsewhere uses `FOR NO KEY UPDATE`, allowing
+foreign-key `KEY SHARE` checks without answer/approval lock inversion.
+
+The UI sends its baseline revision and retries once after a stale response only
+if edited fields still match the baseline values, confirmation/provenance,
+control metadata and help text and the latest draft is editable. A changed field
+stops the retry and retains unsaved input on screen. No submission retry is added.
+
+## Hosted manual browser handoff — 2026-10-12
+
+`ApplicationData.manual_submission_required` is true for legacy/unsupported hosted
+Ashby schemas. It is false for supported freshly inspected `ashby-hosted-v2`
+transport contracts with `schema_contract_version: stable-actions-v1`; old drafts
+must be prepared again. Confirmed unsupported optional answers still require manual work.
+`POST /applications/{id}/review` rechecks these schemas without employer filling.
+`POST /applications/{id}/handoff` requires authentication, `Idempotency-Key`, and
+`{ "approved": true, "review_token": "<current 64-character token>" }`.
+Ownership, profile version, review age (15 minutes), operation token, original-file
+integrity and live schema equality are enforced. An explicitly approved handoff
+opens a visible local browser, sends/fills supported reviewed values and the
+original resume, and leaves custom controls/CAPTCHA/submission to the user.
+
+Success emits `manual_handoff_ready` with manual-field labels, consumes the review,
+and leaves `status: ready_for_review`, `submitted_at: null` and no submission method.
+Startup failure emits `automation_failed`; replaying the same key returns the saved
+response without starting another browser. The browser lifetime is 15 minutes.
+`/approve-submit` rejects unsupported/legacy hosted schemas with 422. Supported
+hosted contracts use the same owner/profile/review/idempotency boundary as native
+submission. Employer RPCs and original-file uploads begin only after approval;
+only explicit employer success records submission. Manual submission is recorded
+via the existing PATCH action only after the user submits on the employer site.
+
+`AnswerInput.value` and `FieldData.value` also accept `list[str]` for `multiselect`
+questions. Available, unique options only; an empty selection is incomplete for
+required questions. Hosted Boolean questions use `select` values `"true"`/`"false"`
+with Yes/No labels; required consent checkboxes retain their true-only rule.
+Confirmed removed postings return `JOB_UNAVAILABLE` and are hidden from jobs and
+matching, preserving application history. Known expired creation/preparation keeps
+the existing HTTP 409 deadline response.
+
+## Required-only questions and salary guidance (2026-10-13)
+
+Application fields include nullable `help_text`, derived from the inspected employer descriptions/placeholders and explicit salary currency/period. Unknown currency is labeled unspecified; examples show a currency code and pay period. Required questions alone appear as prompts. Optional unconfirmed values do not block answer saves or review and are omitted from the review snapshot; specifically submitted AI values still require fresh provenance.
+
+Hosted radio controls with duplicate native values use distinct option labels as their canonical values. Old reviews with ambiguous values require preparation again. Unanswered optional hosted controls remain untouched; native controls are disabled and excluded from the exact approved submission payload. Original schema/owner/version/approval checks remain enforced.

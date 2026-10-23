@@ -1,119 +1,133 @@
 # Turio
 
-**AI Agent for Resume-Based Job Matching and Intelligent Job Application** — a 4-2 final year project.
+**AI Agent for Resume-Based Job Matching and Intelligent Job Application**, a 4-2 final-year project.
 
-Upload a resume once. Turio extracts a reusable candidate profile, discovers jobs from the selected
-dataset, matches and ranks them semantically with grounded explanations, and — only after explicit user
-approval — assists with supported browser-based applications.
+Upload a PDF once, review the extracted profile, discover jobs, and compare explainable
+keyword/TF-IDF/SBERT recommendations. Prepare and track applications using saved information.
+Browser assistance is experimental and disabled by default; final submission always needs
+explicit approval. No employer workflow or human matching effectiveness is yet verified.
 
-Current implementation, verification results and remaining acceptance gates are
-summarized in [the delivery status](docs/DELIVERY_STATUS.md). Live automation is
-disabled by default; synthetic tests do not establish company support or human
-matching effectiveness.
+See [current project context](docs/PROJECT_CONTEXT.md) and [delivery status](docs/DELIVERY_STATUS.md)
+for implemented functionality and remaining acceptance gates.
+
+## AI interpretation and bulk applications
+Current assistance uses fixed free OpenRouter `dots-studio/dots-3-note-preview:free`;
+server-only root `.env` key (`OPENROUTER_API_KEY` or existing `Open_Router`). Unknown
+model confidence is shown as unavailable; there is no paid/TypeSafe fallback.
+- Profile: opt into **Interpret resume with AI**, inspect source-backed proposals,
+  accept them into the editor and save. PDF reading remains local; incomplete
+  model sections retain local fallback. No Google service or automatic PDF transfer.
+- Jobs: select **Fill & review** or **Automatic submission**, then prepare selected
+  applications. Each job exposes its filled fields and an individual review link.
+- Automatic mode requires separate approval of the displayed eligible set; review
+  holds, missing/unconfirmed facts, changed/expired snapshots and hosted/manual
+  forms are skipped. Approval expires after 15 minutes; uncertain submissions do
+  not retry. Hosted Ashby final submission/CAPTCHA remain manual.
+- Existing server-only Jev configuration is described in [Jev assistance](docs/JEV_ASSISTANCE.md).
+  Functional evidence: [OpenRouter checks](docs/evidence/openrouter-free-2026-10-13.json);
+  this is not real-company support or a speed/accuracy benchmark.
 
 ## Repository layout
 
 ```text
-backend/     FastAPI application (routes -> schemas -> services -> repositories)
-frontend/    Next.js application (App Router)
-alembic/     Database migrations
-docs/        Documentation set - the project's sources of truth
-scripts/     Developer and verification scripts
-data/        Local dataset storage (not committed)
-experiments/ Evaluation scripts and results
-docker/      Docker support files
+backend/     FastAPI routes, schemas, services, repositories, models and worker
+frontend/    Next.js App Router application
+alembic/     PostgreSQL migrations
+docs/        Specifications, decisions and verification evidence
+scripts/     Native startup, imports, evaluation and verification
+experiments/ Research tooling and local inputs
+.runtime/    Ignored local services, private settings, logs and persistent data
 ```
 
-## Quick start
+## Publication boundaries
 
-Docker Compose defines PostgreSQL, MinIO, the API, a database worker and the frontend:
+Environment files, native runtime data, resumes, datasets, caches, raw QA screenshots and
+compiled DOCX documents stay local. Personal-sample evidence reports remain private;
+public evidence is limited to reviewed synthetic and operational reports. Historical `D:/Projects/Sessions/` links identify
+local development history, not files available in a GitHub checkout.
 
-```bash
-docker compose up --build
-```
+## Run the existing native Windows setup
 
-Then:
+Docker and WSL are not required. The local setup uses portable PostgreSQL, disk-backed
+S3rver development storage, FastAPI, the database worker and the production Next.js build.
 
-- frontend: <http://localhost:3000>
-- API health: <http://localhost:8000/api/v1/health>
-- API docs (development only): <http://localhost:8000/docs>
-
-No `.env` is required — `docker-compose.yml` supplies defaults for every value. Copy `.env.example` to
-`.env` only when you need to override something.
-
-## Running the backend without Docker
-
-```bash
-cd backend
-python -m venv .venv
-./.venv/Scripts/python -m pip install -r requirements.txt   # Windows
-# source .venv/bin/activate && pip install -r requirements.txt   # Linux/macOS
-```
-
-The application reads `DATABASE_URL` from the environment and fails loudly if it is unset. Tests supply
-their own database, so they need neither PostgreSQL nor Docker:
-
-```bash
-cd backend && ./.venv/Scripts/python -m pytest
-```
-
-## Documentation
-
-Start with `docs/README.md`, then `docs/CLAUDE.md` (execution contract) and `docs/PHASE_PLAN.md`
-(phase gates). `docs/PROGRESS.md` records what is actually built.
-
-## Current implementation
-
-Implemented: authentication, PDF/profile processing, job ingestion/search, labeled
-keyword/TF-IDF/SBERT recommendations, application preparation/review/tracking,
-and the product frontend. Browser assistance is experimental and disabled by
-default. No employer workflow is yet verified. Research evaluation tooling exists,
-but final benchmark, multimodal and edge-optimization results do not.
-
-The user authorized continuing development without waiting for Docker.
-**Phase 3 PostgreSQL/MinIO/Compose verification remains outstanding.**
-See `docs/PROJECT_CONTEXT.md` for the current snapshot and `docs/PROGRESS.md`
-for evidence; implementation is not equivalent to verified completion.
-
-### Background work
-
-The jobs screen queues inventory refresh and matching through `/api/v1/runs`.
-Run the database worker alongside the API (from `backend/`):
+From the repository root:
 
 ```powershell
-./.venv/Scripts/python -m app.workers.main
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-stack.ps1 -Check
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-stack.ps1 -SkipBuild
 ```
 
-Migrate the database first. Compose includes the worker automatically, but its
-real-stack verification is still outstanding. Queued work persists independently
-of the browser request; failed/interrupted runs are not automatically replayed.
-Final application submission is never a queue operation.
+- Frontend: <http://127.0.0.1:13000>
+- API health: <http://127.0.0.1:18080/api/v1/health>
+- API docs in development: <http://127.0.0.1:18080/docs>
 
-### Optional semantic matching
+The launcher reuses the provisioned services and does not reset the database or stored PDFs.
+Processes keep running after the launcher returns. `-Check` only checks prerequisites and starts
+nothing. Without `-SkipBuild`, a missing frontend build is built from installed dependencies;
+existing builds are reused. Rebuild explicitly after frontend source changes.
 
-From the repository root on Windows:
+**Fresh checkout:** `.runtime/native/` is private, ignored local state, not a bundled installation.
+PostgreSQL, storage, the database, credentials and application dependencies must be provisioned
+before this launcher works. It fails before creating runtime state when prerequisites are absent.
+See [native deployment requirements](docs/DEPLOYMENT.md). Never commit `env.json`, database files,
+resumes or provider credentials. This native database does not recover the missing old WSL data.
+
+## Development and tests
+
+Backend dependencies:
+
+```powershell
+python -m venv backend/.venv
+backend/.venv/Scripts/python -m pip install -r backend/requirements.txt
+```
+
+From `backend/`, run:
+
+```powershell
+./.venv/Scripts/python -m pytest
+```
+
+Default tests use isolated SQLite/storage fixtures and require neither a running PostgreSQL
+server nor Docker. Dedicated PostgreSQL integration tests use a separate `turio_test_` database;
+see [deployment](docs/DEPLOYMENT.md). GitHub Actions retains its isolated PostgreSQL service
+container; that does not require Docker on a developer's machine.
+
+Frontend commands, from `frontend/`:
+
+```powershell
+npm ci
+npm run typecheck
+npm run build
+```
+
+The Next.js server proxies requests through `INTERNAL_API_BASE_URL`. Access/refresh tokens stay
+in HTTP-only cookies. Use HTTPS outside localhost. Preserve the approved cream/green,
+top-navigation design unless a redesign is explicitly requested.
+
+## Background work and optional capabilities
+
+The jobs UI queues inventory and matching refreshes through `/api/v1/runs`. The native launcher
+starts `python -m app.workers.main`. Failed/interrupted work is not automatically replayed;
+application submission is never a queue operation.
+
+For optional local SBERT matching:
 
 ```powershell
 backend/.venv/Scripts/python -m pip install -r backend/requirements.txt -r backend/requirements-ml.txt
 backend/.venv/Scripts/python scripts/download_model.py
 ```
 
-The public checkpoint is pinned in `backend/app/ml/ranking.json`. Runtime inference
-defaults to local files only. In Compose, set `INSTALL_ML=true` before rebuilding;
-the host model cache is mounted read-only. Baselines work without ML dependencies.
+The checkpoint is pinned in `backend/app/ml/ranking.json`; inference defaults to local files.
+Missing assets fail explicitly. Baselines work without the optional model.
 
-### Frontend
+- `TURIO_ML_SMOKE=1` enables the downloaded-model functional tests.
+- `TURIO_BROWSER_TESTS=1` enables intercepted native-browser fixtures after installing
+  `backend/requirements-browser.txt` and Chromium. These do not establish live employer support.
+- Do not enable live automation merely because a company appears in the inventory.
+- Research inputs and annotation requirements: [experiments/README.md](experiments/README.md).
+  Synthetic tests are not human effectiveness results.
 
-The Next.js server uses `INTERNAL_API_BASE_URL` to proxy requests. Access and
-refresh tokens stay in HTTP-only cookies, not local/session storage. Use HTTPS
-outside localhost. The original cream/green, editorial, top-navigation direction
-is preserved.
-
-### Tests and evidence
-
-- Backend: `python -m pytest` from `backend/`. Tests use isolated SQLite/storage fixtures.
-- Set `TURIO_ML_SMOKE=1` to include the real, downloaded model API/cache smoke test.
-- Set `TURIO_BROWSER_TESTS=1` for the fully intercepted native browser-adapter fixtures.
-- Frontend: `npm run build` and `npm run typecheck` from `frontend/`.
-- Browser smoke instructions and limitations: `docs/evidence/2026-09-15-development.md`.
-- Benchmark input contract: `experiments/README.md`. Never present synthetic test results as model-quality evaluation.
+Start documentation with [docs/README.md](docs/README.md) and [docs/CLAUDE.md](docs/CLAUDE.md).
+Historical Docker/Compose evidence is retained, but local container files and helpers were removed
+under [ADR-042](docs/ADR.md#adr-042--native-windows-development-without-local-docker).

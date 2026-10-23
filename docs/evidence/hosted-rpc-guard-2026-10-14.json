@@ -1,0 +1,73 @@
+{
+  "root_cause": "A later blocked POST poisoned an already consumed form-state JsonPermit and falsely rejected a successful approved RPC.",
+  "before": {
+    "provenance": "Initial live guarded public lookup tool output",
+    "status": 200,
+    "errors": [],
+    "suggestions": 5,
+    "consumed": true,
+    "rejected": true
+  },
+  "after": {
+    "results": [
+      {
+        "case": "current",
+        "consumed": true,
+        "rejected": false,
+        "status": 200,
+        "errors": [],
+        "suggestions": 5
+      },
+      {
+        "case": "site_headers",
+        "consumed": true,
+        "rejected": false,
+        "status": 200,
+        "errors": [],
+        "suggestions": 5
+      }
+    ],
+    "failures": [
+      {
+        "method": "POST",
+        "host": "jobs.ashbyhq.com",
+        "operation": "ApiAutocompleteGeoLocation",
+        "resource": "fetch",
+        "same_authorized_request": false,
+        "body_matches": false
+      }
+    ],
+    "candidate_transfers": 0,
+    "submissions": 0
+  },
+  "verification": {
+    "browser_focused": {
+      "passed": 40,
+      "seconds": 110.45
+    },
+    "backend_full": {
+      "passed": 385,
+      "skipped": 44,
+      "seconds": 128.14
+    },
+    "reviewer": "Accepted; final/upload/one-use/authorization/receipt safeguards unchanged"
+  },
+  "recovery": {
+    "application_id": "e1f6c69d-7af3-48e6-9e70-c9fe278c3c35",
+    "status": "ready_for_review",
+    "old_approval_cleared": true,
+    "answers_unchanged": true,
+    "employer_requests": 0,
+    "user_confirmed_not_submitted": true
+  },
+  "fresh_review": {
+    "application_id": "e1f6c69d-7af3-48e6-9e70-c9fe278c3c35",
+    "status": "ready_for_review",
+    "fresh_review_ready": true,
+    "readiness_score": 1.0,
+    "answers_unchanged": true,
+    "employer_candidate_transfers": 0,
+    "final_submission_attempts": 0
+  },
+  "limitations": "Live public reads and synthetic browser fixtures only; no candidate transfer or final employer submission. Real final submission remains untested."
+}

@@ -74,7 +74,7 @@ async def list_jobs(
 
 async def get_job(session: AsyncSession, *, job_id: UUID) -> JobData:
     job = await job_repo.get_by_id(session, job_id)
-    if job is None or (job.application_deadline is not None and job.application_deadline < utcnow()):
+    if not job_repo.available(job):
         raise AppError("NOT_FOUND", "No job with that id.", 404)
     return to_job_data(job)
 

@@ -11,7 +11,21 @@ from app.core.time import utcnow
 
 
 def eligible():
-    return Job.application_deadline.is_(None) | (Job.application_deadline >= utcnow())
+    return (Job.application_deadline.is_(None) | (Job.application_deadline >= utcnow())) & (
+        func.coalesce(Job.raw_payload["_turio_availability"]["status"].as_string(), "") != "closed")
+
+
+def available(job):
+    return job is not None and (job.application_deadline is None or job.application_deadline >= utcnow()) and (
+        (job.raw_payload or {}).get("_turio_availability", {}).get("status") != "closed")
+
+
+async def mark_unavailable(session, job_id, reason):
+    job = await get_by_id(session, job_id)
+    if job is not None:
+        job.raw_payload = {**(job.raw_payload or {}), "_turio_availability": {
+            "status": "closed", "reason": reason, "checked_at": utcnow().isoformat()}}
+        await session.flush()
 
 
 async def get_or_create_source(
@@ -51,6 +65,11 @@ async def insert_many(
 
 
 async def update_one(session: AsyncSession, job_id: UUID, values: dict) -> None:
+    current = await session.scalar(select(Job.raw_payload).where(Job.id == job_id))
+    closed = (current or {}).get("_turio_availability")
+    if closed and closed.get("status") == "closed":
+        # A static CSV edit is not evidence that an employer reopened a posting.
+        values = {**values, "raw_payload": {**(values.get("raw_payload") or {}), "_turio_availability": closed}}
     await session.execute(update(Job).where(Job.id == job_id).values(**values))
 
 
@@ -77,6 +96,17 @@ async def matching_jobs(session: AsyncSession) -> list[Job]:
 async def inventory_fingerprint(session: AsyncSession) -> str:
     from app.ml.scoring import digest
 
+    if session.bind is not None and session.bind.dialect.name == "postgresql":
+        from sqlalchemy import String, cast, literal_column
+
+        subq = (
+            select((cast(Job.id, String) + literal_column("':'") + Job.content_hash).label("pair"))
+            .where(eligible())
+            .order_by(Job.id)
+            .subquery()
+        )
+        agg = await session.scalar(select(func.md5(func.coalesce(func.string_agg(subq.c.pair, ","), ""))))
+        return agg or digest([])
     rows = (await session.execute(select(Job.id, Job.content_hash).where(eligible()).order_by(Job.id))).all()
     return digest([(str(row.id), row.content_hash) for row in rows])
 

@@ -1,20 +1,53 @@
 # Turio — Deployment
 
-## 1. Containers
+## 1. Current native Windows development runtime (October 10, 2026)
 
-Use Docker for repeatable environments.
+Local Docker/Compose support was removed under ADR-042. PostgreSQL and object storage
+remain required; the existing native setup runs them without Docker or WSL.
 
-Suggested services:
+From the repository root:
 
-```text
-frontend
-backend
-worker
-postgres
-object-storage
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-stack.ps1 -Check
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/start-local-stack.ps1 -SkipBuild
 ```
 
-Browser automation may require a dedicated runtime/container.
+Frontend: http://127.0.0.1:13000. API: http://127.0.0.1:18080/api/v1.
+PostgreSQL: loopback port 18543. S3rver development storage: loopback port 19000.
+The launcher returns after starting/reusing services; keep their processes running.
+It does not reset data, apply migrations or import the dataset. Existing frontend
+builds are reused; rebuild explicitly after source changes.
+
+### Provisioning requirements
+
+The tracked launcher expects the existing local layout:
+
+- `backend/.venv/Scripts/python.exe` with `backend/requirements.txt` installed.
+- Node.js on PATH and installed `frontend/node_modules`; build with `npm run build`.
+- `.runtime/native/pgsql/` with portable PostgreSQL bin/lib/share; initialize
+  `.runtime/native/pgdata/` and a development database before starting Turio.
+- `.runtime/native/s3/node_modules/s3rver/` (currently S3rver 3.7.1), with persistent
+  objects under `.runtime/native/objects/`.
+- Private `.runtime/native/env.json`: JSON environment-name/string-value map for
+  database URL, JWT secret, storage endpoint/bucket/credentials, internal API URL,
+  `PYTHONPATH=backend`, dataset path and optional capability settings. Use the
+  native loopback endpoints and your provisioned credentials; never commit this file.
+
+`.env.example` documents settings, not usable credentials. There is no automatic
+fresh-checkout provisioning or system installation. Apply `alembic upgrade head`
+with the same backend environment before first use; import available jobs with
+`scripts/import_jobs.py` only when no queued refresh/import is active. Keep live
+browser automation disabled. `.runtime/native/` is ignored and must be retained
+or backed up separately; previous WSL accounts/data have not been recovered.
+
+S3rver is local development emulation, not a production MinIO replacement. Production
+still needs a separately validated database, S3-compatible storage, HTTPS, secrets
+and process supervision. GitHub Actions may use an isolated PostgreSQL container;
+this does not require local Docker. No CI execution or production resilience is
+established by removing container files.
+
+The older `.runtime/native/start.ps1` remains untouched, but use the tracked launcher
+above for current startup. History/checks: `D:/Projects/Sessions/10-10-2026/turio-docker-removal.md`.
 
 ## 2. Environments
 
@@ -65,9 +98,16 @@ Ship the smallest validated deployment.
 
 Do not add Kubernetes, service meshes, or other infrastructure unless the real workload requires them.
 
-## 7. Implemented configuration and verification limits
+## Historical container deployment evidence (September 2026)
 
-The current Compose definition has five services, including the database worker.
+The sections below retain the original setup/checks for provenance. Their removed
+Compose files, build flags and WSL commands are not current startup instructions.
+Use section 1 for native startup; optional capabilities now use the requirements
+files directly. The same safety and acceptance limits remain in force.
+
+## 7. Implemented configuration and verification limits (historical)
+
+The then-current Compose definition had five services, including the database worker.
 The local verification stack has been built and run with PostgreSQL and MinIO.
 See [[evidence/final-engineering-2026-09-17]] for the scoped integration results.
 

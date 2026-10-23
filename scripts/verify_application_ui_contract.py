@@ -32,7 +32,7 @@ async def main(url, output):
          "required": True, "normalized_intent": "phone", "options": [],
          "value": None, "value_source": "missing", "user_confirmed": False},
         {"id": "background", "field_key": "background", "label": "Describe your relevant experience",
-         "input_type": "textarea", "required": False, "normalized_intent": "custom", "options": [],
+         "input_type": "textarea", "required": True, "normalized_intent": "custom", "options": [],
          "value": None, "value_source": "missing", "user_confirmed": False},
     ]
     app = {"id": app_id, "job": {"id": "fixture-job", "title": "Synthetic UI Engineer",
@@ -41,7 +41,7 @@ async def main(url, output):
            "outcome": None, "notes": None, "resume_id": resume_id, "fields": [],
            "missing_fields": [], "readiness_score": 0, "events": [], "review_token": None,
            "submitted_at": None, "submission_method": None}
-    requests, approvals, unexpected, errors = [], [], [], []
+    requests, approvals, handoffs, unexpected, errors = [], [], [], [], []
 
     async def intercept(route):
         request = route.request
@@ -58,6 +58,11 @@ async def main(url, output):
                 await route.abort()
             return
         path = parsed.path
+        if path == prefix + "/capability" and request.method == "GET":
+            requests.append((request.method, path))
+            await route.fulfill(content_type="application/json",
+                                body=json.dumps({"data": {"available": True, "reason": None}, "error": None}))
+            return
         requests.append((request.method, path))
         data, error, status = None, None, 200
         if path == "/api/auth/me" and request.method == "GET":
@@ -84,6 +89,7 @@ async def main(url, output):
                 app.update(review_token="a" * 64, status="ready_for_review", readiness_score=1)
                 data = app
         elif path == prefix + "/approve-submit" and request.method == "POST":
+            assert not app.get("manual_submission_required"), "Hosted form must not use automatic submission."
             assert request.post_data_json == {"approved": True, "review_token": app["review_token"]}
             approvals.append(request.headers.get("idempotency-key"))
             if len(approvals) == 1:
@@ -91,6 +97,11 @@ async def main(url, output):
             else:
                 app.update(status="submitted", submission_method="browser", review_token=None)
                 data = app
+        elif path == prefix + "/handoff" and request.method == "POST":
+            assert request.post_data_json == {"approved": True, "review_token": app["review_token"]}
+            handoffs.append(request.headers.get("idempotency-key"))
+            app.update(review_token=None, events=[{"event_type": "manual_handoff_ready", "created_at": "2026-10-12T06:00:00Z", "event_data": {"message": "The employer browser is open. Submit yourself."}}])
+            data = app
         else:
             unexpected.append(request.url)
             await route.abort()
@@ -103,11 +114,13 @@ async def main(url, output):
         await context.route("**/*", intercept)
         page = await context.new_page()
         page.on("pageerror", lambda e: errors.append(str(e)))
+        page.on("dialog", lambda d: asyncio.create_task(d.accept()))
         await page.goto(url + f"/applications/{app_id}")
         await page.get_by_role("button", name="Apply with Agent", exact=True).click()
-        name = page.get_by_label("Full name", exact=False)
-        await name.wait_for()
-        assert await name.is_disabled() and await name.input_value() == "Synthetic UI Candidate"
+        await page.get_by_label("Phone", exact=False).wait_for()
+        assert await page.get_by_label("Full name", exact=False).count() == 0
+        await page.get_by_text("View filled answers", exact=False).click()
+        await page.get_by_text("Synthetic UI Candidate", exact=True).wait_for()
         await page.get_by_text("Your stored original resume is selected.", exact=True).wait_for()
         await page.get_by_role("button", name="Prepare final review", exact=True).click()
         await page.get_by_text("Complete required fields and confirm every draft before review.", exact=True).wait_for()
@@ -127,6 +140,7 @@ async def main(url, output):
         await submit.wait_for()
         assert await submit.is_disabled() and not approvals
         await page.get_by_label("I have reviewed all answers and explicitly approve", exact=False).check()
+        await page.get_by_role("button", name="Edit saved answers", exact=True).click()
         await page.get_by_label("Phone", exact=False).fill("555-0101")
         assert await submit.count() == 0
         assert await page.get_by_role("button", name="Prepare final review", exact=True).is_disabled()
@@ -146,10 +160,22 @@ async def main(url, output):
         assert not unexpected and not errors, (unexpected, errors)
         output.mkdir(parents=True, exist_ok=True)
         await page.screenshot(path=str(output / "application-mobile.png"), full_page=True)
+        app.update(status="ready_for_review", submission_method=None, manual_submission_required=True, review_token="b" * 64)
+        await page.reload()
+        handoff = page.get_by_role("button", name="Open filled employer form", exact=True)
+        await handoff.wait_for()
+        assert await handoff.is_disabled()
+        assert await page.get_by_role("button", name="Approve & submit application", exact=True).count() == 0
+        await page.get_by_label("I approve sending these reviewed answers and my original resume to the employer form. I will submit it myself.", exact=True).check()
+        await handoff.click()
+        await page.locator(".notice.success").get_by_text("The employer browser is open. Submit yourself.", exact=True).wait_for()
+        assert len(handoffs) == 1 and len(approvals) == 2
+        assert not unexpected and not errors, (unexpected, errors)
+        await page.screenshot(path=str(output / "manual-handoff-mobile.png"), full_page=True)
         result = {"scope": "Frontend only; all API responses intercepted, no backend writes or employer requests",
                   "checks": ["stored profile/resume UI", "missing field rejection", "draft confirmation required",
                              "explicit approval required", "edits require saving and fresh approval",
-                             "390px layout", "same-key retry after simulated failure"],
+                             "390px layout", "same-key retry after simulated failure", "hosted explicit fill approval and manual submission"],
                   "api_requests_intercepted": len(requests), "unexpected_requests": unexpected, "page_errors": errors}
         (output / "result.json").write_text(json.dumps(result, indent=2), encoding="utf-8")
         print(json.dumps(result))

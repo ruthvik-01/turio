@@ -31,9 +31,9 @@ logger = logging.getLogger(__name__)
 
 # Bump when the parsing rules change. DATA_PIPELINE.md section 5 reprocesses on
 # a parser-version change even when the file bytes are identical.
-PARSER_VERSION = "rules-v1"
+PARSER_VERSION = "rules-v6-heading-spacing"
 
-_SCALAR_FIELDS = ("full_name", "phone", "location", "linkedin_url", "github_url", "portfolio_url")
+_SCALAR_FIELDS = ("full_name", "contact_email", "summary", "certifications", "achievements", "phone", "location", "linkedin_url", "github_url", "portfolio_url")
 
 
 def _to_resume_data(resume: Resume) -> ResumeData:
@@ -77,6 +77,7 @@ async def ingest_resume(
         )
 
     checksum = hashlib.sha256(data).hexdigest()
+    profile = await profile_repo.get_or_create(session, user_id, lock=True)
     existing = await resume_repo.get_by_checksum(session, user_id=user_id, checksum=checksum)
 
     if existing is not None and existing.parser_version == PARSER_VERSION:
@@ -102,7 +103,8 @@ async def ingest_resume(
         ProfileUpdateRequest.model_validate(asdict(parsed))
     except ValidationError as exc:
         raise AppError("INVALID_RESUME", "The extracted profile exceeds supported limits. Simplify the resume and retry.", 413) from exc
-    await storage.put(storage_key, data, PDF_MIME_TYPE)
+    if existing is None:
+        await storage.put(storage_key, data, PDF_MIME_TYPE)
 
     created = existing is None
     if existing is not None:
@@ -122,7 +124,6 @@ async def ingest_resume(
         session, resume, parsed_text=text, parser_version=PARSER_VERSION
     )
 
-    profile = await profile_repo.get_or_create(session, user_id)
     for name in _SCALAR_FIELDS:
         setattr(profile, name, getattr(parsed, name))
 

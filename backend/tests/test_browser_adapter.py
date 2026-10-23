@@ -3,6 +3,7 @@
 import asyncio
 import os
 import socket
+import sys
 from email import policy
 from email.parser import BytesParser
 from pathlib import Path
@@ -120,6 +121,17 @@ def multipart(post):
             (part.get_filename(), part.get_payload(decode=True)) for part in message.iter_parts()}
 
 
+async def test_unanswered_optional_native_select_is_omitted_from_reviewed_submission(site):
+    site.html = site.html.replace("</form>", '<label>Optional source<select id="optional-source" name="optional_source">'
+        '<option value="board">Job board</option><option value="other">Other</option></select></label></form>')
+    adapter = site.adapter()
+    snapshot = site.snapshot(await adapter.inspect(FORM_URL))
+    await adapter.fill(FORM_URL, snapshot)
+    result = await adapter.submit(FORM_URL, snapshot)
+    assert result["verified"]
+    assert "optional_source" not in multipart(site.posts[0])
+
+
 async def test_native_inspection_labels_and_destination(site):
     schema = await site.adapter().inspect(FORM_URL)
     fields = {field["field_key"]: field for field in schema["fields"]}
@@ -150,7 +162,7 @@ async def test_submit_uses_exact_reviewed_values_and_original_file(site):
     assert fields["email"][1] == b"candidate@example.com"
     assert fields["resume"] == ("original.pdf", ORIGINAL_PDF)
     assert fields["sponsorship"][1] == b"no"
-    assert fields["phone"][1] == b""  # Unapproved defaults cannot be silently sent.
+    assert "phone" not in fields  # Unanswered optional defaults are omitted.
     assert "newsletter" not in fields
 
 
@@ -307,3 +319,17 @@ async def test_application_api_with_real_browser_and_original_resume(site, clien
     assert len(site.posts) == 1 and len(site.runtimes) == runtimes
     event_types = [event["event_type"] for event in result.json()["data"]["events"]]
     assert event_types.index("review_ready") < event_types.index("submission_approved") < event_types.index("submitted")
+
+
+@pytest.mark.skipif(sys.platform != "win32", reason="Windows API Selector loop")
+async def test_windows_api_loop_inspects_and_fills_without_submitting(site):
+    async def scenario():
+        adapter = site.adapter()
+        schema = await adapter.inspect(FORM_URL)
+        await adapter.fill(FORM_URL, site.snapshot(schema))
+        assert site.reads == ["owned-resume"]
+        assert not site.posts and not site.unknown_requests
+    def run():
+        with asyncio.Runner(loop_factory=asyncio.SelectorEventLoop) as runner:
+            runner.run(scenario())
+    await asyncio.to_thread(run)

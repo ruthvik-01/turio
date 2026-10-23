@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://turio.local/schemas/phase4-benchmark.schema.json",
+  "title": "Turio Phase 4 human-annotated ranking benchmark",
+  "type": "object",
+  "required": ["dataset_version", "annotation_version", "split", "source_name", "consent_confirmed", "sampling_seed", "protocol", "candidates"],
+  "properties": {
+    "dataset_version": {"type": "string", "minLength": 1},
+    "annotation_version": {"type": "string", "minLength": 1},
+    "split": {"const": "held-out"},
+    "source_name": {"type": "string", "minLength": 1},
+    "consent_confirmed": {"const": true},
+    "sampling_seed": {"type": "string", "minLength": 1},
+    "evaluation_date": {"type": "string", "format": "date"},
+    "protocol": {
+      "type": "object",
+      "required": ["minimum_candidates", "jobs_per_candidate", "minimum_annotators"],
+      "properties": {
+        "minimum_candidates": {"const": 10},
+        "jobs_per_candidate": {"const": 50},
+        "minimum_annotators": {"const": 2}
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 10,
+      "maxItems": 10,
+      "items": {
+        "type": "object",
+        "required": ["id", "text", "profile", "jobs"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "resume_id": {"type": "string", "format": "uuid"},
+          "text": {"type": "string", "minLength": 1},
+          "profile": {"type": "object"},
+          "jobs": {
+            "type": "array",
+            "minItems": 50,
+            "maxItems": 50,
+            "items": {
+              "type": "object",
+              "required": ["id", "text", "structured", "relevance", "skill_match", "experience_match", "education_match", "location_match", "annotators"],
+              "properties": {
+                "id": {"type": "string", "minLength": 1},
+                "text": {"type": "string", "minLength": 1},
+                "structured": {"type": "object"},
+                "relevance": {"type": "integer", "minimum": 0, "maximum": 3},
+                "skill_match": {"type": ["integer", "null"], "minimum": 0, "maximum": 3},
+                "experience_match": {"type": ["integer", "null"], "minimum": 0, "maximum": 3},
+                "education_match": {"type": ["integer", "null"], "minimum": 0, "maximum": 3},
+                "location_match": {"type": ["integer", "null"], "minimum": 0, "maximum": 3},
+                "resolution_note": {"type": ["string", "null"]},
+                "annotators": {
+                  "type": "object",
+                  "minProperties": 1,
+                  "additionalProperties": {
+                    "type": "object",
+                    "required": ["relevance", "skill_match", "experience_match", "education_match", "location_match"],
+                    "properties": {
+                      "relevance": {"type": "integer", "minimum": 0, "maximum": 3},
+                      "skill_match": {"type": ["integer", "null"], "minimum": 0, "maximum": 3},
+                      "experience_match": {"type": ["integer", "null"], "minimum": 0, "maximum": 3},
+                      "education_match": {"type": ["integer", "null"], "minimum": 0, "maximum": 3},
+                      "location_match": {"type": ["integer", "null"], "minimum": 0, "maximum": 3}
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "frozen_at": {"type": "string", "format": "date-time"},
+    "ranking_config_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "manifest_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+  }
+}

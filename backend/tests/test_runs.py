@@ -284,3 +284,20 @@ async def test_unchanged_import_keeps_heartbeat_responsive(client, session, fact
     assert await worker.run_once(factory, "responsive-worker", lease_seconds=0.4) == "succeeded"
     result = (await client.get(f"/api/v1/runs/{run['id']}", headers=headers)).json()["data"]
     assert result["result"]["unchanged"] == row_count
+
+
+async def test_heartbeat_survives_transient_renewal_exception(factory, monkeypatch):
+    from types import SimpleNamespace
+    calls = 0
+
+    async def flaky_renew(session, run_id, lease_token, lease_seconds):
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("transient connection glitch")
+        return calls == 2
+
+    monkeypatch.setattr(worker.repo, "renew", flaky_renew)
+    run = SimpleNamespace(id=uuid4(), lease_token=uuid4())
+    await asyncio.wait_for(worker.heartbeat(factory, run, 0.06), timeout=2.0)
+    assert calls == 3

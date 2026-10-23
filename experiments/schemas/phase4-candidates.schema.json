@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://turio.local/schemas/phase4-candidates.schema.json",
+  "title": "Turio Phase 4 anonymized candidate input",
+  "type": "array",
+  "minItems": 10,
+  "maxItems": 10,
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["id", "text", "profile"],
+    "properties": {
+      "id": {"type": "string", "minLength": 1},
+      "resume_id": {"type": "string", "format": "uuid"},
+      "text": {"type": "string", "minLength": 1},
+      "profile": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["skills", "experiences", "educations", "preferred_roles", "location"],
+        "properties": {
+          "skills": {"type": "array", "items": {"type": "string"}},
+          "experiences": {"type": "array", "items": {"type": "object"}},
+          "educations": {"type": "array", "items": {"type": "object"}},
+          "preferred_roles": {"type": ["array", "null"], "items": {"type": "string"}},
+          "location": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}

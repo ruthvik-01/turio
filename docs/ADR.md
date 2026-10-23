@@ -291,6 +291,35 @@ appear in the user's Chrome. All phase statuses must distinguish implementation
 from unmet acceptance evidence. No synthetic benchmark freeze/evaluation.
 **Evidence:** [[evidence/phase-tooling-2026-09-17]].
 
+### ADR-041 — Opt-in bounded Jev assistance
+
+Date: 2026-10-10. Status: accepted for mocked implementation; live pilot not authorized.
+
+Jev classifies previously unknown resume headings and non-sensitive application
+field intents. Local code owns candidate spans, parsing, validation, user edits,
+browser execution and submission authorization. Each action requires explicit
+opt-in before text transfer. PDF bytes and profile values are never sent for
+form mapping. Resume requests send only candidate headings and nearby text;
+these excerpts may contain personal information.
+
+Use pinned `jev-1.13.0`, strict response validation, bounded requests, shared work
+limits and one outbound operation per user. All suggestions require explicit
+confirmation. Profile saves use atomic expected-version checks; application
+events retain Jev provenance. No tables or persistent suggestion cache are added.
+
+Credentials stay server-side and assistance defaults off. No live provider calls
+or claims of extraction effectiveness follow from mocked fixtures. Applicable
+TypeSafe account/DPA retention terms must be reviewed and recorded before a
+separately authorized live pilot; no-training statements do not establish zero
+retention. See `SECURITY_PRIVACY.md` and shared history:
+`D:/Projects/Sessions/10-10-2026/turio-jev-implementation.md`.
+
+### ADR-042 — Native Windows development without local Docker
+**Status:** Accepted, October 10, 2026; user approved removing repository Docker support.
+**Decision:** Use the existing native PostgreSQL/S3rver/FastAPI/worker/Next.js development setup. Track the credential-free launcher in `scripts/start-local-stack.ps1`; keep service binaries, private settings, data and logs in ignored `.runtime/native/`.
+**Impact:** Remove local Dockerfiles, Compose files and obsolete Compose verification helpers; update startup/structure documentation. Preserve existing native data, running services, historical container evidence and GitHub's isolated PostgreSQL service container. No system Docker/WSL uninstall or volume deletion. Fresh checkouts require separately provisioned dependencies/settings; S3rver is development storage, not production MinIO. Container deployment is no longer bundled. Live automation, submission approval and research acceptance boundaries are unchanged.
+**Evidence:** `D:/Projects/Sessions/10-10-2026/turio-docker-removal.md`.
+
 ## ADR template
 
 ### ADR-XXX — Title
@@ -301,3 +330,63 @@ from unmet acceptance evidence. No synthetic benchmark freeze/evaluation.
 **Reasoning:**
 **Impact:**
 **Evidence:**
+
+### ADR-047 — Approved hosted transport and retained closed-job history
+Date: 2026-10-14. Status: implemented; verification evidence linked below.
+Workflow follow-up: explicit Automatic Start approval scopes one selected run to
+stored confirmed information and expires after15 minutes; each final request still
+uses a fresh immutable server review and the existing transport/idempotency checks.
+Missing answers never become inferred legal facts. Shared answers update matching
+editable owned drafts and invalidate reviews; protected/terminal values remain.
+Home uses paginated reads and renders core content independently. Evidence:
+[workflow fixes](evidence/workflow-fixes-2026-10-14.json).
+Reuse existing individual/batch approval, immutable reviews and idempotency. Add
+separate exact-body hosted RPC/file/final permits, never relax the native permit.
+Only confirmed supported controls and the checksum-verified owned original PDF
+may transfer; audit final stored values and require explicit employer success for
+all forms. Leave challenges/unsupported controls manual and never replay uncertain
+submissions. Stable schema hashes exclude per-load action nonces; fresh raw action
+identities remain bound in final permits. Old snapshots require fresh preparation.
+Store confirmed closure in existing job raw metadata, filter active jobs/matches
+and preserve application history and closure across CSV updates; temporary errors
+are not closure. No migration/dependency changes. Evidence:
+[hosted submission](evidence/hosted-submission-2026-10-13.json). History:
+[shared topic](D:/Projects/Sessions/14-10-2026/turio-hosted-auto-submit.md).
+
+### ADR-046 — Fixed free OpenRouter assistance instead of TypeSafe
+Date: 2026-10-13. Status: user selected free model; synthetic/backend/UI verified and native runtime switched.
+Use `dots-studio/dots-3-note-preview:free` with OpenRouter chat-completion JSON schema choices. The initially proposed Liquid free endpoint rejected `data_collection=deny`; chose a responding free endpoint instead of weakening privacy controls. Read the server-only key from the project-root `.env` (`OPENROUTER_API_KEY` or existing `Open_Router`), not unrelated process credentials; do not copy it into frontend/native settings. No router/paid/TypeSafe fallback. Require structured-parameter support and `data_collection=deny`; do not claim account-specific zero retention.
+Chat models do not expose Jev's classifier probabilities. Return null scores and mark every OpenRouter proposal uncertain instead of inventing them. Keep legacy `jev_*` fields/events, now with actual provider/model provenance, explicit acceptance/confirmation, source-only values and existing request/concurrency/submission guards. No new routes/tables/dependencies. History: `D:/Projects/Sessions/13-10-2026/turio-openrouter-switch.md`.
+
+### ADR-045 — Review-only Jev fact interpretation and bounded bulk approval
+Date: 2026-10-13. Status: user-approved bounded feature scope; verification pending.
+Expand the existing opt-in resume-suggestions endpoint to classify source-line roles, then copy validated section-owned facts locally. Incomplete/excluded/failed sections retain local/manual fallback; contact/legal/preference facts remain local. The two phases share the same advisory lock, 15-second deadline and three-request budget. No generated values, new tables or automatic personal-PDF transfer.
+Bulk UI supports fill-and-review or explicit batch approval of eligible applications. Reuse existing per-application immutable review tokens, approval, idempotency and submission checks; no new submission queue/engine. Approval binds shown application/job/profile/resume/field values and expires after 15 minutes. Held, unconfirmed, changed or manual-hosted jobs stay pending; uncertain submissions do not replay. No live-company support claim follows from fixture checks. History: `D:/Projects/Sessions/13-10-2026/turio-jev-interpretation.md` and `turio-bulk-apply-modes.md`.
+
+### ADR-044 — Varied text-PDF layouts with local extraction and Jev only
+Date: 2026-10-13. Status: accepted by explicit user instruction.
+Local positional words/sections determine page and column reading order. Preserve source-backed application email (separate from login email), summary, certifications and achievements in nullable profile columns. The existing opt-in Jev Choice service classifies unfamiliar sections, including supplemental sections; no Google service or PDF/image transfer. Unreadable text pages reject before profile mutation; manual review remains mandatory and universal PDF accuracy is not claimed. Additive migration preserves old rows; no destructive runtime downgrade. Spec: `superpowers/specs/2026-10-13-resume-layouts-design.md`; history: `D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`.
+
+### ADR-048 — Atmos-inspired shared frontend skin and local theme
+
+Date: 2026-10-19. Status: accepted by explicit design selection and implementation-plan approval; delivery verification pending.
+
+Use original lightweight CSS/SVG atmosphere on landing/auth, neutral light/dark surfaces, restrained system-sans headings and an inset pill top navigation across the existing 13 routes. Preserve the supplied green logo, route/auth actions and all resume, bulk, revision, review and submission safeguards. A local validated theme preference changes presentation only; no backend, schema, data, automation or dependency change. Existing footer text may be enlarged decoratively on landing without replacing the logo asset. No copied Atmos code, fonts or imagery; no WebGL or scroll engine.
+
+This supersedes only the prior cream/green-dominant and editorial-serif visual requirements in ADR-011/014/021. ADR-010's frontend authority, ADR-012's top navigation and ADR-013's primary logo asset remain in force. Human effectiveness/live/research gates stay open. Spec: [Turio Atmos](superpowers/specs/2026-10-19-turio-atmos-design.md). History: [daily topic](../../../Projects/Sessions/19-10-2026/turio-atmos-redesign.md).
+
+### ADR-049 — Correct rejected reference fidelity and restore native auth
+
+Date: 2026-10-20. Status: user explicitly requested correction of the delivered design and nonworking login.
+
+Replace the image-based header with a text-only Turio name, centered on public pages; remove duplicate anonymous header auth links. Public landing has one signup entry and one quiet sign-in entry, with a separate How it works action. Preserve authenticated navigation and session/review/submission boundaries.
+
+The earlier CSS atmosphere is not accepted as reference fidelity. Use original WebGL volume rendering with static/CSS fallback and reproduce observed motion: 280ms cubic-bezier(.675,.15,.1,1) hover/exit, 1.2s surface y/opacity/clip reveal, ~980ms heading lift and ~865ms staggered content entrances. Keep reduced-motion, solid-material and readable rest states. No captured proprietary assets/code are vendored.
+
+Login correction includes starting only the existing PostgreSQL18543/API18080 runtime with process-only native configuration, preserving data and leaving worker/storage/old frontend untouched. Verify real signup/login/logout and HttpOnly cookies rather than inferring login from mocks; synthetic auth-only account is retained and credentials are never logged. This supersedes conflicting visual/preview-only limitations of ADR-048, not employer/model/research authorization.
+
+History: [daily correction topic](../../../Projects/Sessions/20-10-2026/turio-atmos-redesign.md).
+
+### ADR-043 ? Authorized Jev pilot and review-only uncertainty
+Date: 2026-10-11. Status: accepted by explicit user instruction.
+The user authorized the supplied server credential, synthetic fixture tests, and selected personal resume excerpts. Public retention reviewed; no account-specific ZDR guarantee assumed. Keep .50+ supported decisions visible for explicit review, mark below .90 uncertain, retain provenance and submission approval. Local positional PDF extraction uses pinned pdfplumber and parser rules-v3-layout; reupload refreshes old parsing. Evidence: `evidence/jev-live-pilot-2026-10-11.json`. History: `D:/Projects/Sessions/11-10-2026/turio-jev-live-pilot.md`.

@@ -39,16 +39,20 @@ async def execute(factory, run):
 
 
 async def heartbeat(factory, run, lease_seconds):
+    failures = 0
     while True:
-        await asyncio.sleep(lease_seconds / 3)
+        await asyncio.sleep(lease_seconds / 3 if failures == 0 else lease_seconds / 6)
         try:
             async with factory() as session:
                 renewed = await asyncio.wait_for(repo.renew(session, run.id, run.lease_token, lease_seconds),
                                                  timeout=min(10, lease_seconds / 3))
             if not renewed:
                 return
+            failures = 0
         except Exception:
-            return
+            failures += 1
+            if failures >= 3:
+                return
 
 
 async def process(factory, run, lease_seconds):

@@ -9,26 +9,26 @@ Do not use this file to introduce a competing layout or navigation model.
 ## 1. Font roles
 
 ```css
---font-ui: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
---font-display: Georgia, "Times New Roman", serif;
+--font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+--font-display: var(--font-ui);
 ```
 
-Use the actual approved product fonts available to the implementation. Never recreate the Turio wordmark with text; use the brand asset.
+Use the approved system fonts already available. The primary Turio mark remains the supplied image asset; the existing footer text may be enlarged decoratively on landing under ADR-048, not substituted for that asset.
 
 ## 2. Base colors
 
-The approved frontend direction uses:
+ADR-048 approves paired neutral palettes; the supplied green logo stays unchanged.
 
-- `--canvas`: soft cream/near-white
-- `--surface`: white/off-white
-- `--ink`: deep navy/charcoal
-- `--muted`: soft gray-green/gray
-- `--hairline`: low-contrast neutral border
-- `--green-deep`: primary natural green derived consistently from the brand palette
-- `--green-soft`: pale green surface
-- `--cream-soft`: pale cream surface
+| Token | Light | Dark |
+| --- | --- | --- |
+| `--canvas` | `#f5f5f3` | `#141413` |
+| `--surface` | `#fafaf8` | `#1d1d1b` |
+| `--ink` | `#1a1a1a` | `#f4f4ef` |
+| `--muted` | `#63635b` | `#b6b6ad` |
+| `--hairline` | `#d5d5d0` | `#41413b` |
+| `--boundary` | `#85857e` | `#939388` |
 
-Exact values may be frozen during implementation, but they must remain within the approved cream/green visual family unless an ADR explicitly changes the direction.
+`--accent` follows ink and `--on-accent` follows canvas for neutral actions. Status/chart roles remain semantic, labelled and independently readable. Decoration uses original sage/stone gradients only on public landing/auth, not data workspaces.
 
 ## 3. Logo tokens
 
@@ -85,7 +85,7 @@ Motion should be short, smooth, and purposeful:
 - checklist transitions,
 - page transitions where they aid continuity.
 
-Avoid perpetual animation and decorative movement that competes with content.
+Use only slow CSS transform/opacity atmosphere on landing/auth, with a clear reading area. Freeze it for reduced motion and suppress it for reduced transparency, increased contrast and forced colours. No decorative animation behind protected workspace data.
 
 ## 8. Accessibility
 

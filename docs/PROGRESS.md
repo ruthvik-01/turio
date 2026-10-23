@@ -1,5 +1,21 @@
 # Turio — Progress Ledger
 
+## Atmos shared frontend redesign — October 20, 2026
+
+[x] Implemented neutral light/dark shared skin across 13 existing routes, validated local theme preference/pre-paint bootstrap, inset pill header/actions, opaque workspaces and original CSS/SVG public atmosphere. Logo, routes, API/session and review/consent/bulk safeguards retained; no new packages or backend changes.
+
+Fresh checks: Node theme/config **25 passed**; frontend typecheck and isolated production build passed; rendered matrix **1,202 passed/0 failed** across 78 route/theme/viewport combinations plus edge cases; focused navigation **15 passed/0 failed**, focused skip **3 passed/0 failed**. Includes actual text/input contrast, semantic status states, first paint/blocked storage, pointer/client navigation, SVG/solid-material and reduced-motion fallbacks. Mobile label crowding was reproduced RED and corrected with non-shrinking links. No page/static-asset/unexpected-network errors.
+
+One fresh scoped review completed; its acceptance-test gaps were covered. Explicit Fable model was unavailable, so reviewer used working session model. Source/docs remain uncommitted with unrelated staged work preserved. Isolated frontend preview: <http://127.0.0.1:13002>, using `.next/atmos`; native API18080 and old frontend13000 were unavailable and not restarted. Full native/backend/employer/research acceptance is not claimed.
+
+Evidence: [rendered results](evidence/turio-atmos/results.json), [navigation](evidence/turio-atmos-navigation/results.json), [skip link](evidence/turio-atmos-skip/results.json). Detail: [shared daily topic](../../../Projects/Sessions/20-10-2026/turio-atmos-redesign.md).
+
+## Publication verification — October 16, 2026
+
+[x] Publication candidate checks: **392 backend tests passed, 47 skipped (218.79s)**; frontend build/typecheck, synthetic bulk/revision/timeout checks, `pip check` and repository structure passed. Restored ignore rules and excluded personal-sample evidence from publication while retaining local originals. Remote CI and optional browser/model/PostgreSQL checks have not been rerun by this publication. No employer actions or benchmark claims.
+
+Publication outcome: [shared history](D:/Projects/Sessions/16-10-2026/turio-github-publish.md).
+
 ## Status legend
 
 - `[ ]` not started
@@ -7,7 +23,80 @@
 - `[x]` complete with evidence
 - `[!]` blocked/needs decision
 
-## Current phase
+## OpenRouter free provider — October 13, 2026
+[x] Active assistance switched from TypeSafe to fixed free Dots via OpenRouter;
+root `.env` key alias preserved server-side, no credential copy. Strict choices,
+unavailable/null scores, explicit review and all bulk/owner/version guards retained.
+Liquid free endpoint rejected privacy filter; selected a compliant responding
+free endpoint instead. Disabled unnecessary reasoning and combined requests;
+entry-role evidence prevents contradictory heading changes. No paid fallback.
+
+Fresh checks: **352 backend passed/34 skipped, 78 PostgreSQL passed, one synthetic
+live test passed (8.27s), frontend build/typecheck and 14 UI groups passed**.
+Native provider flag updated/restarted, health/login200, schema/data retained.
+No personal PDF transfer, actual employer submission, commits or pushes.
+Evidence: [OpenRouter free](evidence/openrouter-free-2026-10-13.json).
+
+## Jev interpretation and bulk modes — October 13, 2026
+[x] Expanded consented source-fact classification and explicit review-only proposals;
+Jev-complete sections replace local grouping, incomplete sections retain fallback.
+[x] Default fill-and-review/eligible automatic bulk modes, per-job fields/holds,
+immutable approval binding, 15-minute expiry, safe skips/stop and no uncertain
+submission retry. Existing per-job approval API retained; hosted final submission
+remains manual. No actual employer submissions.
+
+Fresh evidence: **342 backend passed/33 skipped; 60 PostgreSQL passed; one live
+synthetic Jev test passed; frontend typecheck/build and 14 intercepted UI groups
+passed**. Policy helper check passed using Node native TypeScript. Native stack
+restarted with health/login 200; no schema/data reset or personal sample-profile
+write. Author self-review only; changes uncommitted. Evidence:
+[Jev/bulk modes](evidence/jev-bulk-modes-2026-10-13.json).
+
+## Resume layouts checkpoint — October 13, 2026
+
+[x] Local positional PDF extraction plus Jev-only section assistance (ADR-044),
+no Google service. `rules-v5-multipage` covers tested page/column layouts, contact
+and project boundaries, supplemental editable profile facts and unreadable-page
+rejection before replacement. Reupload older resumes once and review corrections.
+
+Fresh verification: **329 backend passed, 32 opt-in skips**; **30 PostgreSQL API
+checks**, additive migration/drift and old-row preservation pass; frontend
+production build/typecheck and **four intercepted UI groups** pass. Native
+migration `a231013001` applied; API/frontend/worker restarted, health/login 200.
+The supplied two-page PDF retains five projects, four certifications and one
+achievement in local-only QA; the account/profile was not populated with sample
+values. No visual QA, live supplemental Jev call, universal-PDF accuracy or
+full-project completion claim. Author self-review only; changes uncommitted.
+Evidence: [private resume-layout evidence availability](SECURITY_PRIVACY.md#private-verification-evidence). Shared history:
+`D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`.
+
+### Supplied second PDF follow-up — October 13
+[x] `rules-v6-heading-spacing` recognizes exact character-spaced aliases without
+rewriting source text; fixes multiline internship metadata, degree date captions,
+parenthesized skills and visible bare domains. No embedded social URLs exist in
+the supplied PDF, so they remain null rather than invented. Local sample now
+retains summary, 27 skills, one internship/education and two projects. Prior
+sample regression passes. **334 backend passed/32 skipped; 35 PostgreSQL API
+passed**; API/frontend/worker restarted with health/login 200. No frontend/schema
+change or native sample-profile write. Evidence:
+[private heading-spacing evidence availability](SECURITY_PRIVACY.md#private-verification-evidence).
+
+## Current runtime checkpoint — October 10, 2026
+
+[x] Approved local Docker cleanup complete under ADR-042. Native Windows startup is
+tracked in `scripts/start-local-stack.ps1`; removed container files/helpers are backed
+up in ignored `.runtime/docker-removal-backup/`. Database, settings and stored PDFs
+remain untouched. Fresh checkouts still require separate native provisioning.
+
+Fresh verification: default backend suite **230 passed, 18 skipped (78.09s)**;
+structure check, PowerShell syntax, `-Check`, and `-SkipBuild` reentry passed.
+Storage/API/frontend/worker processes remain running; API database health and frontend
+login returned HTTP 200. `git diff --check` passed with line-ending warnings only.
+Optional browser/model/PostgreSQL suites, remote CI, reboot resilience and live/human
+acceptance were not verified by this cleanup. Changes remain uncommitted.
+History: `D:/Projects/Sessions/10-10-2026/turio-docker-removal.md`.
+
+## Prior phase checkpoint (historical; see current context/delivery status)
 
 **Sequential completion: real PostgreSQL ingestion verification** — `[!]`
 NUL normalization regression passes; a fresh-stack rerun is blocked by C: capacity
@@ -592,3 +681,15 @@ identical outputs (not human accuracy or live ATS evidence). Full guarded UI run
 human effectiveness and real-company validation remain open. No synthetic intake
 freeze/evaluation or real submission. Matrix: [[DELIVERY_STATUS]]. Evidence:
 [[evidence/phase-tooling-2026-09-17]].
+
+## Jev milestones — 2026-10-11
+- [x] Owner-scoped mocked resume-heading suggestions, consent/source evidence and atomic expected-version saves.
+- [x] Opt-in unfamiliar form mapping, explicit confirmation, versioned provenance, no general Jev-answer reuse.
+- [x] Strict pinned adapter and request/response limits; PostgreSQL concurrency and intercepted UI verification.
+- [ ] Separately authorize live pilot after applicable account retention/DPA review; human benchmark/live-company gates unchanged.
+See JEV_ASSISTANCE.md and D:/Projects/Sessions/11-10-2026/turio-jev-completion.md for evidence/limits.
+
+Final checks: default backend 255 passed/22 opt-in skips; isolated PostgreSQL 18
+passed; intercepted native-browser fixtures 17 passed/one cleanup warning;
+production UI four groups/zero page errors; production build passed. Evidence:
+[jev-functional-2026-10-11.json](evidence/jev-functional-2026-10-11.json).

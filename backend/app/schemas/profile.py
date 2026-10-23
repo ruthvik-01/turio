@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from typing import Annotated
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 ShortText = Annotated[str, Field(max_length=255)]
 SkillName = Annotated[str, Field(min_length=1, max_length=128)]
@@ -41,6 +41,10 @@ class ProfileData(BaseModel):
     id: uuid.UUID
     version: int
     full_name: str | None = None
+    contact_email: str | None = None
+    summary: str | None = None
+    certifications: list[str] | None = None
+    achievements: list[str] | None = None
     phone: str | None = None
     location: str | None = None
     preferred_roles: list[str] | None = None
@@ -66,7 +70,12 @@ class ProfileUpdateRequest(BaseModel):
     clears a field while omitting it leaves the stored value alone.
     """
 
+    expected_profile_version: int | None = Field(default=None, ge=1, strict=True)
     full_name: ShortText | None = None
+    contact_email: EmailStr | None = Field(default=None, max_length=255)
+    summary: str | None = Field(default=None, max_length=10000)
+    certifications: list[Annotated[str, Field(min_length=1, max_length=2000)]] | None = Field(default=None, max_length=100)
+    achievements: list[Annotated[str, Field(min_length=1, max_length=2000)]] | None = Field(default=None, max_length=100)
     phone: str | None = Field(default=None, max_length=64)
     location: ShortText | None = None
     preferred_roles: list[ShortText] | None = Field(default=None, max_length=20)

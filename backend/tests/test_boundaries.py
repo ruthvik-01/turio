@@ -8,7 +8,7 @@ from app.core.errors import AppError
 @pytest.mark.parametrize("url", [
     "http://jobs.ashbyhq.com/linear/one", "https://localhost/linear/one",
     "https://jobs.ashbyhq.com.evil.invalid/linear/one", "https://jobs.ashbyhq.com:bad/linear/one",
-    "https://user:pass@jobs.ashbyhq.com/linear/one", "https://jobs.ashbyhq.com/unknown/one",
+    "https://user:pass@jobs.ashbyhq.com/linear/one", "https://jobs.ashbyhq.com/unknown",
 ])
 def test_browser_url_gate_rejects_unapproved_destinations(url, monkeypatch):
     monkeypatch.setattr(get_settings(), "browser_automation_enabled", True)

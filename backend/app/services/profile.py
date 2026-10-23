@@ -5,6 +5,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profile import Profile
+from app.core.errors import AppError
 from app.repositories import profiles as profile_repo
 from app.repositories.profiles import ProfileEntities
 from app.schemas.profile import (
@@ -27,6 +28,10 @@ def to_profile_data(profile: Profile, entities: ProfileEntities) -> ProfileWithE
         id=profile.id,
         version=profile.version,
         full_name=profile.full_name,
+        contact_email=profile.contact_email,
+        summary=profile.summary,
+        certifications=profile.certifications,
+        achievements=profile.achievements,
         phone=profile.phone,
         location=profile.location,
         preferred_roles=profile.preferred_roles,
@@ -85,8 +90,12 @@ async def update_profile(
 
     These values are what later phases read: extraction only ever seeds them.
     """
-    profile = await profile_repo.get_or_create(session, user_id)
+    profile = await profile_repo.get_or_create(session, user_id, lock=True)
+    if payload.expected_profile_version is not None and payload.expected_profile_version != profile.version:
+        await session.rollback()
+        raise AppError("CONFLICT", "Your profile changed. Reload it before saving these suggestions.", 409)
     changes = payload.model_dump(exclude_unset=True)
+    changes.pop("expected_profile_version", None)
 
     for name, value in changes.items():
         if name not in _ENTITY_FIELDS:

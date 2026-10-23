@@ -1,0 +1,86 @@
+{
+  "recorded_at": "2026-10-11T00:41:21.652630+05:30",
+  "milestones": [
+    "resume-heading suggestions",
+    "unfamiliar non-sensitive form mapping"
+  ],
+  "live_provider_calls": false,
+  "live_employer_calls": false,
+  "jev_default_enabled": false,
+  "new_product_dependencies": false,
+  "schema_migration": false,
+  "checks": {
+    "post_review_focused": {
+      "passed": 63,
+      "log": ".runtime/jev/review-green.log"
+    },
+    "postgresql": {
+      "passed": 18,
+      "log": ".runtime/jev/postgres-final.log"
+    },
+    "native_browser": {
+      "passed": 17,
+      "warnings": 1,
+      "warning": "Browser cleanup reported I/O operation on closed pipe; tests passed.",
+      "log": ".runtime/jev/browser-regression-final.log"
+    },
+    "frontend_production_build": {
+      "passed": true,
+      "log": ".runtime/jev/build.log"
+    },
+    "production_ui": {
+      "passed": 4,
+      "checks": [
+        "per-action consent, source evidence, dirty-edit guard and versioned save",
+        "stale suggestion refused before editor merge",
+        "Jev confirmation remains explicit through edits and re-edits",
+        "form consent resets after preparation"
+      ],
+      "intercepted_requests": 15,
+      "page_errors": [],
+      "unexpected_requests": [],
+      "limitations": "Synthetic frontend contracts only; no provider/employer/backend writes."
+    },
+    "native_health": {
+      "frontend_login": 200,
+      "proxy_health": 200,
+      "api_health": 200,
+      "database": "ok",
+      "reloaded_api": 200
+    },
+    "final_default_backend_suite": {
+      "passed": 255,
+      "skipped": 22,
+      "seconds": 123.69,
+      "log": ".runtime/jev/backend-final-confirmed.log"
+    },
+    "final_adapter": {
+      "passed": 15,
+      "log": ".runtime/jev/adapter-final.log"
+    }
+  },
+  "review": {
+    "agent": "jev_final_review",
+    "findings_fixed": [
+      "prevalidate replacement answers",
+      "sensitive/type-compatible control exclusion",
+      "bounded streamed provider response"
+    ],
+    "followup": "No unresolved Critical/Important findings in these fixes; reviewer did not rerun tests."
+  },
+  "source_sha256": {
+    "backend/app/adapters/jev.py": "e453f3f729f9c6940a74b207798a23df43ffa24c6a00cbff2becafbedc674c1e",
+    "backend/app/services/resume_suggestions.py": "1c9435f2a1b35937fc69673226c78f9bebcb4daa94233168664540ce88d0be67",
+    "backend/app/services/jev_mapping.py": "7ee621d8c2483460f091f612415914a71c92206ea3a9e0c497d2617e7c1415c4",
+    "backend/app/services/applications.py": "159d7fc396d9868f5c0ed840b5258dd1c360712ebce8cffb9e5a23a862af3602",
+    "backend/app/services/profile.py": "12dc924fc518652ceaf65dd1055eee2241b70b743ce1a1ac8d4f34d5a6faf574",
+    "backend/app/repositories/profiles.py": "d5e45aa51550fa36ae4105d0d0757f34654fc026a216103f638d4baef00dbf70",
+    "frontend/components/profile.tsx": "36c43561c3139f7c934ec25ec42f50197e3fff7a5713641386289a1ad2112cb8",
+    "frontend/components/applications.tsx": "bef25f715073ecffb7ad768d330a013b98cbf59701b5ad67474a7e1ce2c5b33d"
+  },
+  "limits": [
+    "Mocks and synthetic fixtures demonstrate functionality, not extraction effectiveness.",
+    "Human benchmark, live-company acceptance and account retention review remain open."
+  ],
+  "history": "D:/Projects/Sessions/11-10-2026/turio-jev-completion.md"
+}

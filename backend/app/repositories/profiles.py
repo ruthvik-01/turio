@@ -7,6 +7,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.profile import Profile
+from app.models.user import User
 from app.models.profile_entities import Education, Experience, Project, Skill
 from app.services.resume_parser import ParsedEducation, ParsedExperience, ParsedProject
 
@@ -24,8 +25,15 @@ async def get_by_user_id(session: AsyncSession, user_id: UUID) -> Profile | None
     return result.scalar_one_or_none()
 
 
-async def get_or_create(session: AsyncSession, user_id: UUID) -> Profile:
-    profile = await get_by_user_id(session, user_id)
+async def get_or_create(session: AsyncSession, user_id: UUID, *, lock: bool = False) -> Profile:
+    if lock:
+        # Also serialize first-profile creation. Refresh any identity-map copy
+        # after acquiring the lock so an older read cannot overwrite a new save.
+        await session.execute(select(User.id).where(User.id == user_id).with_for_update(key_share=True))
+        profile = await session.scalar(select(Profile).where(Profile.user_id == user_id)
+            .with_for_update().execution_options(populate_existing=True))
+    else:
+        profile = await get_by_user_id(session, user_id)
     if profile is None:
         profile = Profile(user_id=user_id)
         session.add(profile)

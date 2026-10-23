@@ -31,7 +31,7 @@
 | `DATABASE.md` | Canonical PostgreSQL schema, relationships, status/outcome semantics, precedence and idempotency. |
 | `API_SPEC.md` | Canonical REST API routes, envelopes, errors, validation and idempotency rules. |
 | `AUTH.md` | Registration/login, JWT access tokens, refresh-token rotation, family revocation and user isolation. |
-| `DEPLOYMENT.md` | Docker services, environment configuration, workers, deployment environments and operations. |
+| `DEPLOYMENT.md` | Native service prerequisites, environment configuration, workers, operations and historical container evidence. |
 | `SECURITY_PRIVACY.md` | Security/privacy boundaries, secrets, access control, logging, browser credentials, retention and audit rules. |
 | `TESTING.md` | Unit/integration/E2E test strategy and critical safety/behavior cases. |
 
@@ -88,3 +88,21 @@ ADR.md
 ## 8. Reading rule
 
 Do not read every `.md` file for every task. Start with `PROGRESS.md`, then read only the documents mapped to the task in `CLAUDE.md`.
+
+## Jev assistance reference
+
+| File | Purpose |
+|---|---|
+| JEV_ASSISTANCE.md | Jev runtime configuration, transfer disclosure, candidate/confirmation behavior, limits and verification boundaries; governed by ADR-041 and SECURITY_PRIVACY. |
+
+## Hosted manual handoff evidence
+
+| File | Purpose |
+|---|---|
+| [agent-manual-handoff-2026-10-12.json](evidence/agent-manual-handoff-2026-10-12.json) | Full/focused browser and UI checks, live read-only inspection, running-stack contract and remaining manual boundaries. |
+| [agent-continuation-tests-2026-10-12.json](evidence/agent-continuation-tests-2026-10-12.json) | Final-code suite, PostgreSQL isolation/cleanup, real handoff IPC fixture, current Supabase inspection and removed-posting finding. |
+| [answer-reuse-bulk-2026-10-13.json](evidence/answer-reuse-bulk-2026-10-13.json) | Known-answer reuse, bulk preparation, PostgreSQL/browser/UI checks and runtime handoff. |
+| [optional-salary-followup-2026-10-13.json](evidence/optional-salary-followup-2026-10-13.json) | Required-only prompts, radio identity, salary guidance, native omission and deployment/schema verification. |
+| [hosted-submission-2026-10-13.json](evidence/hosted-submission-2026-10-13.json) | Approved hosted transport, stable action contracts, closed-job filtering, browser/UI/database checks and live-submission limits; completed 2026-10-14. |
+| [workflow-fixes-2026-10-14.json](evidence/workflow-fixes-2026-10-14.json) | Shared pending answers, progressive/paginated Home, automatic Start/stale profiles, read-timeout/session-cookie checks and deployment limits. |
+| [application-persistence-2026-10-14.json](evidence/application-persistence-2026-10-14.json) | Stable field IDs, atomic revisions/replay/rollback, reviewed-draft isolation, PostgreSQL lock races and safe rendered UI retry checks. |

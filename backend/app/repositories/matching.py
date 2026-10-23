@@ -2,15 +2,18 @@
 
 from uuid import UUID
 
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.matching import Embedding, JobMatch
 from app.models.user import User
+from app.models.job import Job
+from app.repositories.jobs import eligible
 
 
 async def lock_user(session: AsyncSession, user_id: UUID) -> None:
-    await session.execute(select(User.id).where(User.id == user_id).with_for_update())
+    # Serialize user-scoped work without blocking child-row FK KEY SHARE checks.
+    await session.execute(select(User.id).where(User.id == user_id).with_for_update(key_share=True))
 
 
 async def cached_vectors(session: AsyncSession, keys: list[str]) -> dict:
@@ -41,9 +44,21 @@ async def replace_matches(session: AsyncSession, user_id: UUID, method: str, row
 
 
 async def user_matches(session: AsyncSession, user_id: UUID, method: str) -> list[JobMatch]:
-    rows = await session.execute(select(JobMatch).where(JobMatch.user_id == user_id, JobMatch.method == method).order_by(JobMatch.final_score.desc(), JobMatch.job_id))
+    rows = await session.execute(select(JobMatch).join(Job, Job.id == JobMatch.job_id).where(eligible(), JobMatch.user_id == user_id, JobMatch.method == method).order_by(JobMatch.final_score.desc(), JobMatch.job_id))
     return list(rows.scalars())
 
 
+async def match_page(session, user_id, method, profile_version, inventory_hash, signature, limit, offset):
+    conditions = [eligible(), JobMatch.user_id == user_id, JobMatch.method == method]
+    counts = select(func.count()).select_from(JobMatch).join(Job, Job.id == JobMatch.job_id)
+    total = await session.scalar(counts.where(*conditions))
+    conditions += [JobMatch.profile_version == profile_version, JobMatch.inventory_hash == inventory_hash,
+                   JobMatch.ranking_config_version == signature]
+    fresh = await session.scalar(counts.where(*conditions))
+    rows = (await session.execute(select(JobMatch, Job).join(Job, Job.id == JobMatch.job_id)
+        .where(*conditions).order_by(JobMatch.final_score.desc(), JobMatch.job_id).limit(limit).offset(offset))).all()
+    return rows, fresh, fresh != total
+
+
 async def owned_match(session: AsyncSession, user_id: UUID, match_id: UUID) -> JobMatch | None:
-    return (await session.execute(select(JobMatch).where(JobMatch.id == match_id, JobMatch.user_id == user_id))).scalar_one_or_none()
+    return (await session.execute(select(JobMatch).join(Job, Job.id == JobMatch.job_id).where(eligible(), JobMatch.id == match_id, JobMatch.user_id == user_id))).scalar_one_or_none()

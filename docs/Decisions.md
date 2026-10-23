@@ -28,3 +28,7 @@ Synthetic-only Phase 5 functional verification before closing the Phase 4 human 
 Continue engineering without phase-review pauses, but preserve unmet acceptance gates: [[ADR#ADR-039 — Continue engineering completion without phase-review pauses]].
 
 Browser display configuration, UTF-8 research tooling and measured local optimization without manufactured modalities or labels: [[ADR#ADR-040 — Complete implementable phase tooling without inventing evidence]].
+
+Browser availability UX (September 17): expose the adapter's existing configuration/URL gate through an owner-scoped read endpoint, without opening a browser. Do not enable unvalidated live automation to hide the disabled message. Parser upgrades are opt-in through upload/review, not automatic profile overwrites. See [[evidence/profile-company-usability-2026-09-17]].
+
+Opt-in bounded Jev decisions, source-backed review, atomic freshness and retained provenance: [ADR-041](ADR.md#adr-041--opt-in-bounded-jev-assistance). Live requests require separately reviewed retention terms/pilot authorization. See JEV_ASSISTANCE.md.

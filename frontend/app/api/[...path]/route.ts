@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-const base = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8000/api/v1").replace(/\/$/, "");
+const base = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:18080/api/v1").replace(/\/$/, "");
 type Tokens = { access_token: string; refresh_token: string; expires_in: number };
 const refreshes = new Map<string, { expires: number; promise: Promise<Tokens | null> }>();
 const allowed = new Set(["auth", "health", "profiles", "resumes", "jobs", "matches", "applications", "runs"]);
@@ -96,7 +96,7 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
       }
       return fetch(`${base}/${resource}${request.nextUrl.search}`, {
         method: request.method, headers, body: payload as BodyInit | undefined,
-        cache: "no-store", signal: AbortSignal.timeout(300000),
+        cache: "no-store", signal: AbortSignal.timeout(["GET", "HEAD"].includes(request.method) ? 15000 : 300000),
       });
     };
     let result = await upstream();
@@ -111,6 +111,10 @@ async function proxy(request: NextRequest, context: { params: Promise<{ path: st
     if (tokens) setTokens(response, tokens, secure);
     if (result.status === 401 || ((authAction === "logout" || authAction === "logout-all") && result.ok)) clearTokens(response);
     return response;
-  } catch { return error("The API could not be reached. Check that the backend and database are running.", 503); }
+  } catch {
+    const response = error("The API could not be reached. Check that the backend and database are running.", 503);
+    if (tokens) setTokens(response, tokens, secure);
+    return response;
+  }
 }
 export { proxy as GET, proxy as POST, proxy as PATCH, proxy as DELETE };
