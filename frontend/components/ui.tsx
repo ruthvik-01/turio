@@ -24,21 +24,56 @@ function ThemeToggle() {
     }}><span className="theme-indicator" aria-hidden="true" /></button>;
 }
 
+const NAV_ITEMS: Array<[string, string, ReactNode]> = [
+  ["/home", "Home", <svg key="home" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1v-9.5Z" /></svg>],
+  ["/jobs", "Jobs", <svg key="jobs" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>],
+  ["/applications", "Applications", <svg key="applications" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1.5" /><path d="m9 14 2 2 4-4" /></svg>],
+  ["/interviews", "Interviews", <svg key="interviews" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5" /><path d="M8 2v4M16 2v4M3 10h18" /></svg>],
+  ["/resources", "Resources", <svg key="resources" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" /></svg>],
+  ["/profile", "Profile", <svg key="profile" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4" /><path d="M5 20a7 7 0 0 1 14 0" /></svg>],
+];
+
 export function Header() {
   const path = usePathname();
   const router = useRouter();
   const { user, clearForLogout } = useSession();
   const [error, setError] = useState("");
+  const [navOpen, setNavOpen] = useState(false);
+  useEffect(() => { setNavOpen(false); }, [path]);
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setNavOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [navOpen]);
   async function logout() {
     try { await api("/auth/logout", { method: "POST", body: "{}" }); clearForLogout(); router.push("/"); }
     catch (error) { setError((error as Error).message); }
   }
   const publicPage = path === "/" || path === "/login" || path === "/signup";
+  const activeItem = NAV_ITEMS.find(([href]) => path.startsWith(href)) ?? NAV_ITEMS[0];
   return <><header className={`site-header${publicPage ? " public-header" : ""}`}>
     {publicPage && <ThemeToggle />}
     <Link href={user ? "/home" : "/"} className="brand" aria-label="Turio home">Turio</Link>
-    {user && !publicPage && <nav aria-label="Main navigation">{[["/home", "Home"], ["/jobs", "Jobs"], ["/applications", "Applications"], ["/interviews", "Interviews"], ["/resources", "Resources"], ["/profile", "Profile"]].map(([href, text]) =>
-      <Link key={href} href={href} aria-current={path.startsWith(href) ? "page" : undefined}>{text}</Link>)}</nav>}
+    {user && !publicPage && <nav aria-label="Main navigation" className={navOpen ? "is-open" : undefined}>
+      {navOpen && <div className="mobile-nav-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
+      <button
+        type="button"
+        className="mobile-nav-trigger"
+        aria-expanded={navOpen}
+        aria-controls="turio-nav-links"
+        aria-label="Open navigation menu"
+        onClick={() => setNavOpen(open => !open)}
+      >
+        {activeItem[2]}
+        <span>{activeItem[1]}</span>
+        <svg className="mobile-nav-chevron" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6" /></svg>
+      </button>
+      <div id="turio-nav-links" className="nav-links">
+        {NAV_ITEMS.map(([href, text, icon]) =>
+          <Link key={href} href={href} aria-current={path.startsWith(href) ? "page" : undefined} onClick={() => setNavOpen(false)}>{icon}<span>{text}</span></Link>)}
+      </div>
+    </nav>}
     <div className="header-actions">
       {!publicPage && <ThemeToggle />}
       {user ? (
