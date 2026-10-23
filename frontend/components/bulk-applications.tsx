@@ -150,7 +150,19 @@ export function BulkApplications({ selected, onSelect, visibleJobs, loading = fa
     } catch (error) { setError((error as Error).message); } finally { setBusy(false); }
   }
   return <>{error && <Notice kind="error">{error}</Notice>}{notice && <Notice>{notice}</Notice>}
-<section className="panel detail-panel" style={{ marginBottom: 24 }}><h2>Bulk job applications</h2><p className="small muted">Automatic submission prepares and sends selected jobs using your stored resume, profile and confirmed answers after you approve starting the run. Missing answers are asked once below; unsupported forms remain pending. Fill & review prepares drafts for your review.</p>
+<section className="panel detail-panel minimal-bulk-panel" style={{ marginBottom: 24 }}>
+      <div className="section-header-row">
+        <h2>Bulk applications</h2>
+        <span className="small muted">{Object.keys(selected).length} selected</span>
+      </div>
+      <p className="small muted" style={{ margin: "4px 0 10px" }}>Prepare and send multiple applications using your saved profile.</p>
+      <details className="more" style={{ marginBottom: 16 }}>
+        <summary>How it works</summary>
+        <p className="small muted" style={{ marginTop: 6, lineHeight: 1.6 }}>
+          Automatic submission prepares and sends selected jobs using your stored resume, profile and confirmed answers.
+          You approve before anything is submitted. Missing answers are asked once; unsupported forms remain pending.
+        </p>
+      </details>
       <label>Bulk application mode<Select label="Bulk application mode" value={bulkMode} disabled={busy} onChange={value => { setBulkMode(value as "review" | "automatic"); setBulkApproved(false); }} options={[{ value: "review", label: "Fill & review" }, { value: "automatic", label: "Automatic submission" }]} /></label>
       <label className="check-label small" style={{ marginTop: 12 }}><input type="checkbox" checked={bulkAiConsent} disabled={busy} onChange={e => setBulkAiConsent(e.target.checked)} />Use AI for unfamiliar employer fields in this batch. I agree to send field labels/options through OpenRouter; profile values stay local.</label>
       <div className="actions" style={{ marginTop: 16 }}><button className="button secondary small" disabled={busy || loading || !visibleJobs.length} onClick={() => { setBulkApproved(false); onSelect(values => ({ ...values, ...Object.fromEntries(visibleJobs.map(job => [job.id, job])) })); }}>Select visible jobs</button><button className="button primary" disabled={busy || !Object.keys(selected).length} onClick={() => void prepareBulk(false, bulkMode === "automatic")}>{bulkMode === "automatic" ? "Start automatic applications" : "Prepare selected applications"}</button>{selectedResults.some(result => result.error && result.stage !== "submit") && <button className="button secondary small" disabled={busy} onClick={() => void prepareBulk(true, bulkMode === "automatic")}>Retry failed applications</button>}{bulkRunning ? <button className="text-button" onClick={() => { stopBulk.current = true; setNotice("Stopping after the current job finishes."); }}>Stop after current job</button> : <button className="text-button" disabled={busy || !Object.keys(selected).length} onClick={() => { onSelect({}); setBulkResults({}); setHeldForReview({}); setBulkApproved(false); setSharedValues({}); }}>Clear selection</button>}<span className="small muted" aria-live="polite">{Object.keys(selected).length} selected</span></div>

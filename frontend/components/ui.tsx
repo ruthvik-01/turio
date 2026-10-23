@@ -1,7 +1,7 @@
 "use client";
 import { ButtonLabel, TransitionLink as Link } from "./route-motion";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import type { Job, Match } from "@/lib/types";
 import { useSession } from "./session";
@@ -39,6 +39,9 @@ export function Header() {
   const { user, clearForLogout } = useSession();
   const [error, setError] = useState("");
   const [navOpen, setNavOpen] = useState(false);
+  const navLinksRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number; opacity: number }>({ left: 0, width: 0, opacity: 0 });
+
   useEffect(() => { setNavOpen(false); }, [path]);
   useEffect(() => {
     if (!navOpen) return;
@@ -46,6 +49,44 @@ export function Header() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [navOpen]);
+
+  useEffect(() => {
+    const update = () => {
+      const el = navLinksRef.current;
+      if (!el) return;
+      const active = el.querySelector<HTMLAnchorElement>('a[aria-current="page"]');
+      if (active) {
+        setIndicator({
+          left: active.offsetLeft,
+          width: active.offsetWidth,
+          opacity: 1,
+        });
+      } else {
+        setIndicator(prev => ({ ...prev, opacity: 0 }));
+      }
+    };
+    update();
+    const frame = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(frame);
+  }, [path, user]);
+
+  useEffect(() => {
+    const update = () => {
+      const el = navLinksRef.current;
+      if (!el) return;
+      const active = el.querySelector<HTMLAnchorElement>('a[aria-current="page"]');
+      if (active) {
+        setIndicator({
+          left: active.offsetLeft,
+          width: active.offsetWidth,
+          opacity: 1,
+        });
+      }
+    };
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   async function logout() {
     try { await api("/auth/logout", { method: "POST", body: "{}" }); clearForLogout(); router.push("/"); }
     catch (error) { setError((error as Error).message); }
@@ -69,7 +110,16 @@ export function Header() {
         <span>{activeItem[1]}</span>
         <svg className="mobile-nav-chevron" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m18 15-6-6-6 6" /></svg>
       </button>
-      <div id="turio-nav-links" className="nav-links">
+      <div id="turio-nav-links" ref={navLinksRef} className="nav-links">
+        <span
+          className="nav-indicator"
+          style={{
+            transform: `translate3d(${indicator.left}px, 0, 0)`,
+            width: `${indicator.width}px`,
+            opacity: indicator.opacity,
+          }}
+          aria-hidden="true"
+        />
         {NAV_ITEMS.map(([href, text, icon]) =>
           <Link key={href} href={href} aria-current={path.startsWith(href) ? "page" : undefined} onClick={() => setNavOpen(false)}>{icon}<span>{text}</span></Link>)}
       </div>
@@ -163,4 +213,86 @@ export function JobCard({ job, match, selection }: { job: Job; match?: Match; se
 }
 export function Pagination({ offset, total, size = 12, onChange }: { offset: number; total: number; size?: number; onChange: (offset: number) => void }) {
   return <div className="pagination"><span className="muted small">{total ? `${offset + 1}–${Math.min(offset + size, total)} of ${total.toLocaleString()}` : "0 results"}</span><div><button className="button secondary small" disabled={offset === 0} onClick={() => onChange(Math.max(0, offset - size))}>Previous</button><button className="button secondary small" disabled={offset + size >= total} onClick={() => onChange(offset + size)}>Next</button></div></div>;
+}
+
+export function SegmentedTabs<T extends string>({
+  items,
+  value,
+  onChange,
+  ariaLabel,
+  className = "",
+}: {
+  items: { value: T; label: ReactNode; icon?: ReactNode }[];
+  value: T;
+  onChange: (value: T) => void;
+  ariaLabel?: string;
+  className?: string;
+}) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [indicator, setIndicator] = useState<{ left: number; width: number; opacity: number }>({ left: 0, width: 0, opacity: 0 });
+
+  const update = (targetEl?: HTMLElement | null) => {
+    const container = containerRef.current;
+    if (!container) return;
+    const active = targetEl || container.querySelector<HTMLElement>('button.active, button[aria-selected="true"]');
+    if (active) {
+      setIndicator({
+        left: active.offsetLeft,
+        width: active.offsetWidth,
+        opacity: 1,
+      });
+    } else {
+      setIndicator(prev => ({ ...prev, opacity: 0 }));
+    }
+  };
+
+  useEffect(() => {
+    update();
+    const frame = requestAnimationFrame(() => update());
+    return () => cancelAnimationFrame(frame);
+  }, [value]);
+
+  useEffect(() => {
+    const onResize = () => update();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`tabs ${className}`}
+      role="tablist"
+      aria-label={ariaLabel}
+    >
+      <span
+        className="tabs-indicator"
+        style={{
+          transform: `translate3d(${indicator.left}px, 0, 0)`,
+          width: `${indicator.width}px`,
+          opacity: indicator.opacity,
+        }}
+        aria-hidden="true"
+      />
+      {items.map(item => {
+        const active = item.value === value;
+        return (
+          <button
+            key={item.value}
+            role="tab"
+            type="button"
+            aria-selected={active}
+            className={active ? "active" : ""}
+            onClick={(e) => {
+              update(e.currentTarget);
+              onChange(item.value);
+            }}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 }

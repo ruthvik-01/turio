@@ -18,6 +18,7 @@ export function Jobs() {
   const [offset, setOffset] = useState(0);
   const [method, setMethod] = useState<Method>("sbert");
   const [platform, setPlatform] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const [jobs, setJobs] = useState<JobPage | null>(null);
   const [matches, setMatches] = useState<MatchPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,10 +66,53 @@ export function Jobs() {
     return <label className="check-label small"><input type="checkbox" aria-label={`Select ${job.title} at ${job.company}`} checked={!!selected[job.id]} disabled={busy} onChange={e => { setSelected(values => { const next = { ...values }; if (e.target.checked) next[job.id] = job; else delete next[job.id]; return next; }); }} />Select for bulk application</label>;
   }
   const visibleJobs = tab === "all" ? jobs?.jobs ?? [] : matches?.matches.map(match => match.job) ?? [];
-  return <Workspace><PageHeading eyebrow="" title="Jobs" action={<button className="button secondary small" disabled={busy} onClick={refreshJobs}>Refresh inventory</button>}>Search by title, company or location, or compare jobs with your profile.</PageHeading>
-    <div className="tabs" role="tablist" aria-label="Job views">{[["all", "All opportunities"], ["matches", "For you"]].map(([key, title]) => <button role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} key={key} onClick={() => { setTab(key as typeof tab); setOffset(0); }}>{title}</button>)}</div>
-    {tab === "all" ? <form className="filters panel" onSubmit={search}><label className="search-filter">Search<input name="q" placeholder="Job title or company…" /></label><CompanyFilter /><label>Location<input name="location" placeholder="City or country" /></label><label>Platform (Ashby supported)<Select label="Platform (Ashby supported)" name="ats" value={platform} onChange={setPlatform} options={[{ value: "", label: "All platforms" }, { value: "ashby", label: "Ashby" }]} /></label><button className="button primary" type="submit">Search</button></form> :
-      <div className="filters panel"><label>Matching method<Select label="Matching method" value={method} onChange={value => { setMethod(value as Method); setOffset(0); }} options={[{ value: "sbert", label: "SBERT semantic + structured signals" }]} /></label><button className="button primary" disabled={busy} onClick={generate}>{busy ? "Working…" : "Refresh my matches"}</button></div>}
+  return <Workspace>
+    <div className="page-heading">
+      <div>
+        <h1>Jobs</h1>
+        <p className="muted">Search opportunities or compare matches with your profile.</p>
+      </div>
+      <button type="button" className="link small" disabled={busy} onClick={refreshJobs} title="Refresh dataset inventory">
+        ↻ Refresh inventory
+      </button>
+    </div>
+    {/* Clean two-option tabs (MATTER.MD §7) */}
+    <div className="tabs minimal-tabs" role="tablist" aria-label="Job views">
+      {[["all", "All opportunities"], ["matches", "For you"]].map(([key, title]) => (
+        <button role="tab" aria-selected={tab === key} className={tab === key ? "active" : ""} key={key} onClick={() => { setTab(key as typeof tab); setOffset(0); }}>
+          {title}
+        </button>
+      ))}
+    </div>
+    {tab === "all" ? (
+      <form className="filters panel minimal-search-card" onSubmit={search}>
+        <div className="minimal-search-row">
+          <label className="search-filter" style={{ flex: 1, margin: 0 }}>
+            <span style={{ display: "none" }}>Search jobs</span>
+            <input name="q" placeholder="Search roles, skills, or companies…" />
+          </label>
+          <button type="button" className={`button secondary small${showFilters ? " is-active" : ""}`} aria-expanded={showFilters} onClick={() => setShowFilters(v => !v)}>
+            Filters{showFilters ? " ▴" : " ▾"}
+          </button>
+          <button className="button primary small" type="submit">Search</button>
+        </div>
+        {showFilters && (
+          <div className="filters-expanded-row">
+            <CompanyFilter />
+            <label>Location<input name="location" placeholder="City or country" /></label>
+            <label>Platform<Select label="Platform" name="ats" value={platform} onChange={setPlatform} options={[{ value: "", label: "All platforms" }, { value: "ashby", label: "Ashby" }]} /></label>
+          </div>
+        )}
+      </form>
+    ) :
+      (
+        <div className="filters panel minimal-search-card">
+          <label style={{ margin: 0, flex: 1 }}>Matching method
+            <Select label="Matching method" value={method} onChange={value => { setMethod(value as Method); setOffset(0); }} options={[{ value: "sbert", label: "SBERT semantic + structured signals" }]} />
+          </label>
+          <button className="button primary small" disabled={busy} onClick={generate}>{busy ? "Working…" : "Refresh my matches"}</button>
+        </div>
+      )}
     {error && <Notice kind="error">{error}</Notice>}{notice && <Notice>{notice}</Notice>}
     <BulkApplications selected={selected} onSelect={setSelected} visibleJobs={visibleJobs} loading={loading}
       externalBusy={busy} onBusyChange={setBusy} onUnavailable={removeUnavailableJob} />

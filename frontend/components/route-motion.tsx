@@ -55,10 +55,12 @@ export function MotionProvider({ children }: { children: ReactNode }) {
     if (!root || reduced()) { router.push(href); return; }
     pending.current = true;
     const version = ++navigationVersion.current;
-    const exit = root.animate([{ opacity: 1, transform: "translateY(0)" }, { opacity: 0, transform: "translateY(-18px)" }],
-      { duration: 280, easing: EASE, fill: "forwards" });
+    const exit = root.animate(
+      [{ opacity: 1, transform: "translateY(0)" }, { opacity: 0, transform: "translateY(-10px)" }],
+      { duration: 240, easing: "cubic-bezier(0.25, 1, 0.5, 1)", fill: "forwards" }
+    );
     animations.current.add(exit);
-    await Promise.race([exit.finished.catch(() => {}), new Promise<void>(resolve => setTimeout(resolve, 320))]);
+    await Promise.race([exit.finished.catch(() => {}), new Promise<void>(resolve => setTimeout(resolve, 260))]);
     if (alive.current && version === navigationVersion.current) router.push(href);
   }, [router, cancel]);
 
@@ -86,18 +88,23 @@ export function MotionProvider({ children }: { children: ReactNode }) {
       if (!entered) {
         entered = true;
         if (changed && path !== "/") {
-          animate(root, [{ clipPath: "inset(0 0 100% 0)", transform: "translateY(42vh)", opacity: 0 },
-            { clipPath: "inset(0 0 0 0)", transform: "translateY(0)", opacity: 1 }], 1200);
+          animate(root, [
+            { opacity: 0, transform: "translateY(18px)" },
+            { opacity: 1, transform: "translateY(0)" }
+          ], 520);
         }
-        animate(heading, [{ transform: "translateY(32px)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], 980, changed ? 120 : 0);
+        animate(heading, [
+          { opacity: 0, transform: "translateY(14px)" },
+          { opacity: 1, transform: "translateY(0)" }
+        ], 540, changed ? 40 : 0);
         const actions = root.querySelector(".landing .actions, .auth-card");
-        if (actions) { seen.add(actions); animate(actions, [{ transform: "translateY(24px)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], 980, 100); }
+        if (actions) { seen.add(actions); animate(actions, [{ transform: "translateY(16px)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], 540, 80); }
       }
-      const panels = [...root.querySelectorAll("main > .panel, main > section.panel, main .job-card, .step-card")].slice(0, 24);
+      const panels = [...root.querySelectorAll("main > .panel, main > section.panel, main .job-card, .step-card, .next-up-card")].slice(0, 24);
       panels.forEach((panel, index) => {
         if (seen.has(panel)) return;
         seen.add(panel);
-        animate(panel, [{ transform: "translateY(24px)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], 865, Math.min(index * 50 + 180, 500));
+        animate(panel, [{ transform: "translateY(12px)", opacity: 0 }, { transform: "translateY(0)", opacity: 1 }], 500, Math.min(index * 35 + 60, 280));
       });
     };
     reveal();
