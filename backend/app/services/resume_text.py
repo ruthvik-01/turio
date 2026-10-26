@@ -72,7 +72,7 @@ def extract_text(data: bytes, mime_type: str) -> str:
                 if layout and hasattr(positioned, "extract_words"):
                     text = ordered_text(positioned, text)
                 if not text.strip():
-                    raise AppError("INVALID_RESUME", "Every resume page must contain searchable text. Scanned pages need OCR; Jev cannot read images.", 415)
+                    raise AppError("INVALID_RESUME", "Every resume page must contain searchable text. Scanned pages need OCR; AI assistance cannot read images.", 415)
                 if index == 0:
                     for line in normalize_text(text).splitlines()[:12]:
                         if _section_for(line):

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import "./globals.css";
 import { SessionProvider } from "@/components/session";
+import { BulkRunProvider } from "@/components/bulk-run";
 import { Header } from "@/components/ui";
 import { Atmosphere } from "@/components/atmosphere";
 import { MotionProvider } from "@/components/route-motion";
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body>
         <Atmosphere />
-        <SessionProvider><MotionProvider><a className="skip-link" href="#main-content">Skip to content</a><Header /><div id="main-content">{children}</div><footer className="site-footer"><span className="footer-wordmark">Turio</span><span>Review before submitting.</span></footer></MotionProvider></SessionProvider>
+        <SessionProvider><BulkRunProvider><MotionProvider><a className="skip-link" href="#main-content">Skip to content</a><Header /><div id="main-content">{children}</div><footer className="site-footer"><span className="footer-wordmark">Turio</span><span>Review before submitting.</span></footer></MotionProvider></BulkRunProvider></SessionProvider>
       </body>
     </html>
   );

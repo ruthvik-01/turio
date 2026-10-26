@@ -413,7 +413,7 @@ as `stapply-company-inventory.json`; missing/invalid input returns
 Selection continues to use `GET /jobs?company=<canonical name>` combined with
 `q`, `location`, `ats`, `limit` and `offset`. Company and Platform are independent.
 
-## Opt-in Jev assistance — 2026-10-11
+## Opt-in AI assistance — 2026-10-11
 
 All routes require authentication and the existing envelope.
 
@@ -432,15 +432,15 @@ All routes require authentication and the existing envelope.
   local/manual fallback. Heading and fact phases share one operation budget.
   Current OpenRouter response includes actual `provider`/`model`; confidence and
   winner probability are null (not fabricated), and proposals are uncertain.
-  Offered-choice JSON is validated; legacy numeric Jev responses remain compatible.
+  Offered-choice JSON is validated.
   No profile mutation occurs.
 - `PATCH /api/v1/profiles/me`: optional positive `expected_profile_version`.
   Compare under the mutation lock before scalar/entity edits; stale saves return
   409 with no requested changes applied. Omitted versions remain compatible.
 - `POST /api/v1/applications/{id}/start`: optional `{ "ai_assist": false }`.
-  Bodyless calls remain deterministic; true opts into TypeSafe metadata transfer
+  Bodyless calls remain deterministic; true opts into OpenRouter metadata transfer
   for this preparation only, not submission.
-- Existing `/answers` items gain `jev_confirmed: false`. `jev_profile` answers
+- Existing `/answers` items gain `ai_confirmed: false`. `ai_profile` answers
   need an explicit true flag to confirm a new/edited value. Editing without it
   clears confirmation. Their source persists and they never enter general saved
   reuse. Stale profile/resume/form provenance returns 409 and requires preparation.
@@ -449,20 +449,20 @@ Assistance defaults off. `unavailable` preserves local/manual processing;
 legacy textless stored PDFs return `ocr_needed`; new uploads with unreadable
 pages reject before profile replacement. Concurrent source changes return `stale`.
 Both paths consume shared work limits; rate/concurrency rejection is 429.
-Confidence is a decision statistic, not measured accuracy. `JEV_ASSISTANCE.md`
-documents configuration, privacy, validation and request/response limits.
+Confidence is a decision statistic, not measured accuracy. `ADR-041` and
+`SECURITY_PRIVACY.md` document configuration, privacy, validation and limits.
 
-Application fields with Jev provenance expose `jev_confidence`,
-`jev_winner_probability` and `jev_uncertain`. Supported choices >=0.50 may be
+Application fields with AI provenance expose `ai_confidence`,
+`ai_winner_probability` and `ai_uncertain`. Supported choices >=0.50 may be
 reviewed; confidence below 0.90 is explicitly uncertain and never implicitly
 confirmed. Authorization and submission approval rules remain unchanged.
 
 ## OpenRouter provider — 2026-10-13
-`ASSISTANCE_PROVIDER=openrouter` selects the pinned free
-`dots-studio/dots-3-note-preview:free` model. Key is read server-side from root
-`.env` (`OPENROUTER_API_KEY` or `Open_Router`). Existing consent/API names,
-validation, field confirmation and bulk gates are retained; no paid or TypeSafe
-fallback. Unscored choices require review. Evidence:
+`ASSISTANCE_ENABLED=true` enables the pinned free
+`dots-studio/dots-3-note-preview:free` model, the only provider since the 2026-10-26
+TypeSafe removal. Key is read server-side from root `.env` (`OPENROUTER_API_KEY` or
+`Open_Router`). Existing consent/API names, validation, field confirmation and bulk
+gates are retained; no paid provider fallback. Unscored choices require review. Evidence:
 `evidence/openrouter-free-2026-10-13.json`.
 
 ## Bulk modes — 2026-10-14
@@ -475,7 +475,7 @@ values. Changed, held, expired, unsupported-hosted or
 unconfirmed applications remain pending. Each submitted application still has
 its own fresh review token/idempotency key and backend approval checks. The batch
 approval lasts 15 minutes; uncertain final requests are not retried. Optional
-batch Jev consent applies only to employer metadata and resets per action.
+batch AI consent applies only to employer metadata and resets per action.
 
 Saving reusable confirmed answers also updates equivalent fields in unreviewed
 owned pending drafts. Reviewed drafts retain their answers and tokens until

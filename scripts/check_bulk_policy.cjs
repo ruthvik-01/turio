@@ -9,7 +9,7 @@ assert.equal(automaticBlocker(ready), null);
 assert.ok(automaticBlocker({ ...ready, manual_submission_required: true }));
 assert.ok(automaticBlocker({ ...ready, manual_submission_required: undefined }));
 assert.ok(automaticBlocker({ ...ready, status: 'submitted' }));
-assert.ok(automaticBlocker({ ...ready, fields: [{ ...ready.fields[0], user_confirmed: false, value_source: 'jev_profile' }] }));
+assert.ok(automaticBlocker({ ...ready, fields: [{ ...ready.fields[0], user_confirmed: false, value_source: 'ai_profile' }] }));
 assert.ok(automaticBlocker({ ...ready, fields: [{ ...ready.fields[0], input_type: 'checkbox', value: false }] }));
 for (const change of [{ id: 'other-application' }, { job: { ...ready.job, title: 'Changed role' } }, { job: { ...ready.job, company: 'Changed employer' } }, { resume_id: 'other' }, { profile_version: 4 }, { application_url: 'https://other.invalid' },
   { fields: [{ ...ready.fields[0], value: 'Changed Candidate' }] },

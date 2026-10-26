@@ -13,7 +13,7 @@ for implemented functionality and remaining acceptance gates.
 ## AI interpretation and bulk applications
 Current assistance uses fixed free OpenRouter `dots-studio/dots-3-note-preview:free`;
 server-only root `.env` key (`OPENROUTER_API_KEY` or existing `Open_Router`). Unknown
-model confidence is shown as unavailable; there is no paid/TypeSafe fallback.
+model confidence is shown as unavailable; there is no paid provider fallback.
 - Profile: opt into **Interpret resume with AI**, inspect source-backed proposals,
   accept them into the editor and save. PDF reading remains local; incomplete
   model sections retain local fallback. No Google service or automatic PDF transfer.
@@ -23,7 +23,7 @@ model confidence is shown as unavailable; there is no paid/TypeSafe fallback.
   holds, missing/unconfirmed facts, changed/expired snapshots and hosted/manual
   forms are skipped. Approval expires after 15 minutes; uncertain submissions do
   not retry. Hosted Ashby final submission/CAPTCHA remain manual.
-- Existing server-only Jev configuration is described in [Jev assistance](docs/JEV_ASSISTANCE.md).
+- Assistance is opt-in via `ASSISTANCE_ENABLED`; OpenRouter is the only provider. See [ADR-041](docs/ADR.md).
   Functional evidence: [OpenRouter checks](docs/evidence/openrouter-free-2026-10-13.json);
   this is not real-company support or a speed/accuracy benchmark.
 

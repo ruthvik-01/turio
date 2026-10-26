@@ -16,26 +16,26 @@ cross-phase handoff, not a claim that unmet research or live-site gates passed.
 | 8 — Finalization | Regression suites, dedicated PostgreSQL CI, guarded application UI CI, restart policies, delivery/evidence docs | CI definitions not remotely executed; full UI launch denied; live/human acceptance incomplete |
 
 ## Current OpenRouter provider — October 13, 2026
-Active assistance uses fixed free `dots-studio/dots-3-note-preview:free`, not the
-TypeSafe key. Root `.env` credential stays server-side; null scores and explicit
+Active assistance uses fixed free `dots-studio/dots-3-note-preview:free`; the legacy
+TypeSafe provider was removed on 2026-10-26. Root `.env` credential stays server-side; null scores and explicit
 review replace unavailable classifier probabilities. 352 backend/78 PostgreSQL
 checks, one live synthetic case, frontend build/typecheck and 14 UI groups pass.
 Native runtime healthy; no new schema or real employer submission. Hosted final
 submission/CAPTCHA and research acceptance gates remain open/manual. Evidence:
 [OpenRouter free](evidence/openrouter-free-2026-10-13.json).
 
-## Jev/bulk verification — October 13, 2026
+## AI/bulk verification — October 13, 2026
 Expanded opt-in source-fact interpretation plus fill-and-review/eligible automatic
 bulk modes under ADR-045. Every automatic submission still needs an explicitly
 approved immutable application snapshot; held/manual/unconfirmed/changed jobs
 stay pending. Hosted final submission remains manual. 342 backend/60 PostgreSQL
-checks, one live synthetic Jev case, frontend build/typecheck, policy helper and
+checks, one live synthetic AI case, frontend build/typecheck, policy helper and
 14 intercepted UI groups pass. No actual employer submission, human research or
 universal automation claim. Native data/schema retained. Evidence:
-[Jev/bulk modes](evidence/jev-bulk-modes-2026-10-13.json).
+The AI/bulk evidence record was deleted with the 2026-10-26 TypeSafe removal.
 
 ## Resume layout verification — October 13, 2026
-Local PDF text/layout extraction plus opt-in Jev only; no Google service. Source
+Local PDF text/layout extraction plus opt-in AI only; no Google service. Source
 supplemental fields/editor and safe unreadable-page rejection implemented under
 ADR-044. 329 backend tests, 30 PostgreSQL API tests, additive migration/schema
 drift, frontend typecheck/build and four intercepted UI groups pass. Local sample

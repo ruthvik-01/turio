@@ -1,11 +1,10 @@
-"""Source-backed Jev interpretation; no generated candidate values."""
+"""Source-backed AI interpretation; no generated candidate values."""
 import json
 from datetime import date
 
 import pytest
 from pydantic import SecretStr
-
-from app.adapters import jev
+from app.adapters import assistance, openrouter
 from app.services import resume_interpretation
 from support import auth_headers, upload_resume
 
@@ -52,8 +51,8 @@ def test_fact_sources_keep_offsets_and_exclude_contact_legal_lines():
     assert any(record['item'] is None for record in records)
 
 
-async def test_jev_roles_recover_non_lexicon_role_and_project_boundaries():
-    op = jev.JevOperation(True)
+async def test_ai_roles_recover_non_lexicon_role_and_project_boundaries():
+    op = assistance.AssistanceOperation(True)
     async def evaluate(items): return choices(items)
     op.evaluate = evaluate
     fields, evidence, unresolved = await resume_interpretation.interpret(op, SOURCE, {}, 'checksum')
@@ -67,7 +66,7 @@ async def test_jev_roles_recover_non_lexicon_role_and_project_boundaries():
 
 async def test_project_technologies_remain_source_backed_after_model_grouping():
     source = SOURCE.replace('Implemented a service.', 'Implemented a service using Python.') + 'SKILLS\nPython\n'
-    op = jev.JevOperation(True)
+    op = assistance.AssistanceOperation(True)
     async def evaluate(items):
         result = choices(items)
         for item in items:
@@ -82,7 +81,7 @@ async def test_project_technologies_remain_source_backed_after_model_grouping():
 
 
 async def test_incomplete_section_cannot_replace_profile_with_partial_entities():
-    op = jev.JevOperation(True)
+    op = assistance.AssistanceOperation(True)
     async def evaluate(items):
         decisions = choices(items)
         decisions.pop(next(item['id'] for item in items if json.loads(item['text'])['target'] == 'Built Atlas'))
@@ -95,7 +94,7 @@ async def test_incomplete_section_cannot_replace_profile_with_partial_entities()
 
 
 async def test_provider_cannot_supply_an_unoffered_role_or_invented_value():
-    op = jev.JevOperation(True)
+    op = assistance.AssistanceOperation(True)
     async def evaluate(items):
         return {item['id']: {'choice': 'Invented Corporation', 'confidence': 0.99, 'winner_probability': 0.99} for item in items}
     op.evaluate = evaluate
@@ -105,8 +104,8 @@ async def test_provider_cannot_supply_an_unoffered_role_or_invented_value():
 
 async def test_profile_change_during_interpretation_discards_all_proposals(client, make_pdf, monkeypatch):
     from app.core.config import get_settings
-    monkeypatch.setattr(get_settings(), 'jev_enabled', True)
-    monkeypatch.setattr(get_settings(), 'typesafe_api_key', SecretStr('synthetic-test-only'))
+    monkeypatch.setattr(get_settings(), 'assistance_enabled', True)
+    monkeypatch.setattr(openrouter, 'load_key', lambda: SecretStr('synthetic-test-only'))
     headers = await auth_headers(client)
     uploaded = (await upload_resume(client, headers, make_pdf(SOURCE))).json()['data']
     changed = False
@@ -117,7 +116,7 @@ async def test_profile_change_during_interpretation_discards_all_proposals(clien
             response = await client.patch('/api/v1/profiles/me', headers=headers, json={'full_name':'User Edited Candidate'})
             assert response.status_code == 200
         return choices(items)
-    monkeypatch.setattr(jev.JevOperation, 'evaluate', evaluate)
+    monkeypatch.setattr(assistance.AssistanceOperation, 'evaluate', evaluate)
     response = await client.post(f"/api/v1/resumes/{uploaded['resume']['id']}/suggestions", headers=headers, json={'consent':True})
     data = response.json()['data']
     assert data['status'] == 'stale' and data['suggested_fields'] == {} and data['suggestions'] == []
@@ -126,10 +125,10 @@ async def test_profile_change_during_interpretation_discards_all_proposals(clien
 
 async def test_existing_consent_api_returns_source_facts_without_profile_mutation(client, make_pdf, monkeypatch):
     from app.core.config import get_settings
-    monkeypatch.setattr(get_settings(), 'jev_enabled', True)
-    monkeypatch.setattr(get_settings(), 'typesafe_api_key', SecretStr('synthetic-test-only'))
+    monkeypatch.setattr(get_settings(), 'assistance_enabled', True)
+    monkeypatch.setattr(openrouter, 'load_key', lambda: SecretStr('synthetic-test-only'))
     async def evaluate(self, items): return choices(items)
-    monkeypatch.setattr(jev.JevOperation, 'evaluate', evaluate)
+    monkeypatch.setattr(assistance.AssistanceOperation, 'evaluate', evaluate)
     headers = await auth_headers(client)
     original = (await upload_resume(client, headers, make_pdf(SOURCE))).json()['data']
     path = f"/api/v1/resumes/{original['resume']['id']}/suggestions"

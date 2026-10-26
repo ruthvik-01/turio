@@ -7,7 +7,7 @@ from sqlalchemy import select
 from app.models.profile import Profile
 
 from app.core.errors import AppError
-from app.adapters.jev import uncertain
+from app.adapters.assistance import uncertain
 from app.adapters.ashby_hosted import automatic_supported
 from app.core.time import utcnow
 from app.ml.scoring import digest
@@ -19,7 +19,7 @@ from app.services.auth import get_current_user
 from app.services.jobs import to_job_data
 from app.services.profile import get_profile
 from app.services import application_operations as operations
-from app.services import jev_mapping
+from app.services import ai_mapping
 from app.services.resume_parser import parse_resume
 from app.repositories import profiles as profile_repo
 from app.schemas.profile import ProfileUpdateRequest
@@ -44,7 +44,7 @@ def invalidate(app):
 async def to_data(session, app) -> ApplicationData:
     pairs = await repo.fields(session, app.id)
     events = await repo.events(session, app.id)
-    provenance = next((e.event_data for e in reversed(events) if e.event_type == "jev_fields_mapped"), {})
+    provenance = next((e.event_data for e in reversed(events) if e.event_type == "ai_fields_mapped"), {})
     decisions = {d["field_key"]: d for d in provenance.get("decisions", [])}
     missing = [f.label for f, a in pairs if f.required and not mapping.complete(f, a)]
     required = [(f, a) for f, a in pairs if f.required]
@@ -55,9 +55,9 @@ async def to_data(session, app) -> ApplicationData:
         help_text=mapping.salary_help(f.label, f.input_type, schema_fields.get(f.field_key, {}).get("help_text")),
         value=a.value if a else None, value_source=a.value_source if a else "missing",
         user_confirmed=a.user_confirmed if a else False,
-        jev_confidence=decisions.get(f.field_key, {}).get("confidence") if a and a.value_source == "jev_profile" else None,
-        jev_winner_probability=decisions.get(f.field_key, {}).get("winner_probability") if a and a.value_source == "jev_profile" else None,
-        jev_uncertain=bool(a and a.value_source == "jev_profile" and uncertain(decisions.get(f.field_key, {})))) for f, a in pairs]
+        ai_confidence=decisions.get(f.field_key, {}).get("confidence") if a and a.value_source == "ai_profile" else None,
+        ai_winner_probability=decisions.get(f.field_key, {}).get("winner_probability") if a and a.value_source == "ai_profile" else None,
+        ai_uncertain=bool(a and a.value_source == "ai_profile" and uncertain(decisions.get(f.field_key, {})))) for f, a in pairs]
     return ApplicationData(id=app.id, job=to_job_data(await job_repo.get_by_id(session, app.job_id)),
         application_url=app.application_url, status=app.status, outcome=app.outcome, notes=app.notes,
         resume_id=app.resume_id, revision=app.revision, profile_version=app.profile_version,
@@ -175,7 +175,7 @@ async def start(session, user_id, application_id, adapter, *, ai_assist=False):
         app.resume_id = resume.id if resume else None
     prior_fields = await repo.fields(session, app.id)
     prior = {mapping.question_key(f): (a.value, a.value_source, a.user_confirmed)
-             for f, a in prior_fields if a and a.value_source not in {"profile", "jev_profile", "application_only"}}
+             for f, a in prior_fields if a and a.value_source not in {"profile", "ai_profile", "application_only"}}
     local_answers = {(f.field_key, mapping.legacy_question_key(f)): (a.value, a.value_source, a.user_confirmed)
                      for f, a in prior_fields if a and a.value_source == "application_only"}
     app.status = "preparing"
@@ -203,7 +203,7 @@ async def start(session, user_id, application_id, adapter, *, ai_assist=False):
                     or (f.field_key, mapping.legacy_question_key(f)) in local_answers
                     or (mapping.reusable(f) and mapping.question_key(f) in history)
                     or (mapping.reusable(f) and await repo.saved_answer(session, user_id, mapping.question_key(f), mapping.legacy_question_key(f)))}
-            decisions, assistance_metadata = await jev_mapping.map_fields(session, user_id, new_fields, skip)
+            decisions, assistance_metadata = await ai_mapping.map_fields(session, user_id, new_fields, skip)
             await guard_operation(session, app, token)
             if await session.scalar(select(Profile.version).where(Profile.user_id == user_id)) != profile.version:
                 raise AppError("CONFLICT", "Your profile changed during assistance. Prepare again.", 409)
@@ -216,7 +216,7 @@ async def start(session, user_id, application_id, adapter, *, ai_assist=False):
             source = "profile"
             confirmed = True
             if field.field_key in decisions:
-                source, confirmed = "jev_profile", False
+                source, confirmed = "ai_profile", False
             local_answer = local_answers.get((field.field_key, mapping.legacy_question_key(field)))
             if local_answer is not None:
                 value, source, confirmed = local_answer
@@ -233,7 +233,7 @@ async def start(session, user_id, application_id, adapter, *, ai_assist=False):
                     confirmed = mapping.has_value(value)
             if not mapping.has_value(value) and local_answer is None and resume_facts and field.normalized_intent in mapping.CONTACT_FACTS:
                 value = mapping.profile_value(field, resume_facts, user.email, app.resume_id)
-                source, confirmed = ("jev_profile", False) if field.field_key in decisions else ("profile", True)
+                source, confirmed = ("ai_profile", False) if field.field_key in decisions else ("profile", True)
             if mapping.has_value(value) or local_answer is not None:
                 value = mapping.validate_answer(field, value, app.resume_id)
                 prepared_answers.append((field, value, source, confirmed))
@@ -254,7 +254,7 @@ async def start(session, user_id, application_id, adapter, *, ai_assist=False):
         app.form_schema = schema
         app.profile_version = profile.version
         if assistance_metadata is not None:
-            repo.event(session, app, "jev_fields_mapped", consent=True, **assistance_metadata,
+            repo.event(session, app, "ai_fields_mapped", consent=True, **assistance_metadata,
                 profile_version=profile.version, resume_id=str(app.resume_id) if app.resume_id else None,
                 resume_checksum=resume_checksum, form_hash=digest(schema),
                 decisions=[{"field_key": key, **decision} for key, decision in decisions.items()])
@@ -291,7 +291,7 @@ async def answers(session, user_id, application_id, payload, request_key):
     app = reserved
     pairs = {f.id: (f, a) for f, a in await repo.fields(session, app.id)}
     requested_fields = {item.field_id for item in payload.answers}
-    await require_fresh_jev(session, app, [(f, a) for f, a in pairs.values()
+    await require_fresh_ai(session, app, [(f, a) for f, a in pairs.values()
         if f.required or f.id in requested_fields or (a and a.user_confirmed and mapping.has_value(a.value))])
     if len({a.field_id for a in payload.answers}) != len(payload.answers):
         raise AppError("CONFLICT", "Each field may appear only once.", 422)
@@ -307,18 +307,18 @@ async def answers(session, user_id, application_id, payload, request_key):
         if answer is None:
             answer = ApplicationAnswer(field_id=field.id, value_source="user")
             session.add(answer)
-        if answer.value_source == "jev_profile":
+        if answer.value_source == "ai_profile":
             unchanged_confirmed = answer.value == value and answer.user_confirmed
-            answer.user_confirmed = item.user_confirmed and (item.jev_confirmed or unchanged_confirmed)
-            if item.jev_confirmed:
-                repo.event(session, app, "jev_answer_confirmed", field_key=field.field_key,
+            answer.user_confirmed = item.user_confirmed and (item.ai_confirmed or unchanged_confirmed)
+            if item.ai_confirmed:
+                repo.event(session, app, "ai_answer_confirmed", field_key=field.field_key,
                            profile_version=app.profile_version, resume_id=str(app.resume_id) if app.resume_id else None)
         else:
             answer.user_confirmed = item.user_confirmed
         answer.value = value
-        if answer.value_source not in {"profile", "jev_profile"}:
+        if answer.value_source not in {"profile", "ai_profile"}:
             answer.value_source = "user" if item.save_for_reuse else "application_only"
-        if item.save_for_reuse and mapping.reusable(field) and answer.value_source != "jev_profile" and item.user_confirmed and mapping.has_value(value):
+        if item.save_for_reuse and mapping.reusable(field) and answer.value_source != "ai_profile" and item.user_confirmed and mapping.has_value(value):
             question = mapping.question_key(field)
             if question in shared and shared[question] != value:
                 raise AppError("CONFLICT", "Matching questions must have the same reusable answer.", 422)
@@ -345,7 +345,7 @@ async def answers(session, user_id, application_id, payload, request_key):
             profile.version += 1
             # This draft can review its authored corrections immediately. Other
             # drafts keep their old version and must prepare before submission.
-            if app.profile_version == old_version and not any(a and a.value_source == "jev_profile" for _, a in pairs.values()):
+            if app.profile_version == old_version and not any(a and a.value_source == "ai_profile" for _, a in pairs.values()):
                 app.profile_version = profile.version
                 for field, answer in pairs.values():
                     attribute = "contact_email" if field.normalized_intent == "email" else field.normalized_intent
@@ -359,7 +359,7 @@ async def answers(session, user_id, application_id, payload, request_key):
         candidates = {}
         for other, field, answer in await repo.pending_fields(session, user_id):
             if (field.id not in requested_fields and mapping.question_key(field) in shared and mapping.reusable(field)
-                and field.input_type != "file" and not (answer and answer.value_source in {"profile", "application_only", "jev_profile"})):
+                and field.input_type != "file" and not (answer and answer.value_source in {"profile", "application_only", "ai_profile"})):
                 candidates[other.id] = other.revision
         for other_id, revision in candidates.items():
             # Do not wait on another active editor while holding this draft.
@@ -370,7 +370,7 @@ async def answers(session, user_id, application_id, payload, request_key):
             for field, answer in await repo.fields(session, other.id):
                 question = mapping.question_key(field)
                 if (field.id in requested_fields or question not in shared or not mapping.reusable(field) or field.input_type == "file"
-                    or answer and answer.value_source in {"profile", "application_only", "jev_profile"}):
+                    or answer and answer.value_source in {"profile", "application_only", "ai_profile"}):
                     continue
                 value = mapping.validate_answer(field, shared[question], other.resume_id)
                 if answer and answer.value == value and answer.user_confirmed:
@@ -392,12 +392,12 @@ async def answers(session, user_id, application_id, payload, request_key):
     return await response_record(session, user_id, key, hashed, app)
 
 
-async def require_fresh_jev(session, app, pairs):
-    derived = [(f, a) for f, a in pairs if a and a.value_source == "jev_profile"]
+async def require_fresh_ai(session, app, pairs):
+    derived = [(f, a) for f, a in pairs if a and a.value_source == "ai_profile"]
     if not derived:
         return
     events = await repo.events(session, app.id)
-    provenance = next((e.event_data for e in reversed(events) if e.event_type == "jev_fields_mapped"), {})
+    provenance = next((e.event_data for e in reversed(events) if e.event_type == "ai_fields_mapped"), {})
     resume = await repo.resume(session, app.user_id, app.resume_id) if app.resume_id else None
     current_version = await session.scalar(select(Profile.version).where(Profile.user_id == app.user_id))
     decisions = {d["field_key"]: d for d in provenance.get("decisions", [])}
@@ -405,13 +405,13 @@ async def require_fresh_jev(session, app, pairs):
         and provenance.get("resume_id") == (str(app.resume_id) if app.resume_id else None)
         and provenance.get("resume_checksum") == (resume.checksum if resume else None)
         and provenance.get("form_hash") == digest(app.form_schema)
-        and all(decisions.get(f.field_key, {}).get("field_hash") == jev_mapping.fingerprint(f) for f, _ in derived))
+        and all(decisions.get(f.field_key, {}).get("field_hash") == ai_mapping.fingerprint(f) for f, _ in derived))
     if not fresh:
         for _, answer in derived:
             answer.user_confirmed = False
         invalidate(app)
         app.status = "needs_input"
-        repo.event(session, app, "jev_suggestions_stale")
+        repo.event(session, app, "ai_suggestions_stale")
         await session.commit()
         raise AppError("CONFLICT", "AI suggestions are stale. Prepare the application again.", 409)
 
@@ -421,7 +421,7 @@ async def review(session, user_id, application_id, adapter):
     app = await repo.owned(session, user_id, application_id, lock=True)
     ensure_editable(app)
     pairs = await repo.fields(session, app.id)
-    await require_fresh_jev(session, app, [(f, a) for f, a in pairs if f.required or (a and a.user_confirmed and mapping.has_value(a.value))])
+    await require_fresh_ai(session, app, [(f, a) for f, a in pairs if f.required or (a and a.user_confirmed and mapping.has_value(a.value))])
     if not app.form_schema or app.profile_version != profile.version:
         raise AppError("CONFLICT", "Prepare the application with your current profile before reviewing.", 409)
     if any(f.required and not mapping.complete(f, a) for f, a in pairs):

@@ -1,9 +1,113 @@
 # Turio — Deployment
 
+## 0. Container deployment with Supabase (October 25, 2026)
+
+PostgreSQL is **Supabase** (managed, project ref `djjmyyvbpgkvxwsjiejp`, region
+`ap-southeast-2`). Resume binaries are in **Supabase Storage**, reached through
+its S3-compatible endpoint. Neither runs in a container. Only three services
+deploy: `backend`, `worker`, `frontend`.
+
+```powershell
+cp .env.docker.example .env.docker   # fill DATABASE_URL, SECRET_KEY, S3 keys
+docker compose --env-file .env.docker up -d --build
+```
+
+Files: `docker-compose.yml`, `backend/Dockerfile`, `frontend/Dockerfile`,
+`.dockerignore`, `frontend/.dockerignore`, `.env.docker.example`.
+
+### Supabase connection string
+
+Use the **session pooler (port 5432)** or the **direct connection**. Do not use
+the transaction pooler on 6543: Alembic migrations and psycopg prepared
+statements do not survive transaction-mode pooling.
+
+The driver prefix must stay `postgresql+psycopg` — `app/core/db.py` builds an
+async engine and `alembic/env.py` builds a sync engine from the same URL.
+
+```text
+postgresql+psycopg://postgres.<ref>:<password>@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres?sslmode=require
+```
+
+### Schema state
+
+The Supabase database is at Alembic revision `a231025001`. It was created by
+applying the migration chain's offline SQL, not by running `alembic upgrade
+head` against the remote host. `backend` still runs `alembic upgrade head` on
+start, which is a no-op at this revision.
+
+Revision `a231025001` does two things beyond the original chain:
+
+- Adds covering indexes for six foreign keys the earlier revisions missed.
+- Revokes all `anon` / `authenticated` privileges on `public` and enables RLS
+  with no policies. Turio's API connects as the table owner and never uses
+  PostgREST or the publishable key, so this only removes exposure. The role
+  grants are guarded by a `pg_roles` check so a plain PostgreSQL database (the
+  native development runtime) runs the same revision unchanged.
+
+Do not add RLS policies for `anon` or `authenticated` unless a client-side
+Supabase integration is deliberately introduced; the current frontend reaches
+the API only through its own server-side proxy.
+
+### Object storage: Supabase Storage
+
+Resume binaries live in the private `turio-resumes` bucket, reached through the
+S3-compatible endpoint. The application code is unchanged: it still speaks plain
+S3 through `backend/app/core/storage.py`.
+
+Two provider differences are handled in the adapter:
+
+- **No CreateBucket.** Supabase provisions buckets through the dashboard or SQL.
+  `OBJECT_STORAGE_ENSURE_BUCKET=false` makes the startup check a read-only
+  `HeadBucket` instead of a create attempt.
+- **Checksum headers.** botocore 1.43 adds `x-amz-checksum-*` to PutObject by
+  default; `request_checksum_calculation="when_required"` suppresses them.
+
+Endpoint and region must match the project exactly, or signing fails with
+`SignatureDoesNotMatch`:
+
+```text
+OBJECT_STORAGE_ENDPOINT=https://<ref>.storage.supabase.co/storage/v1/s3
+OBJECT_STORAGE_REGION=<project region, e.g. ap-southeast-2>
+OBJECT_STORAGE_BUCKET=turio-resumes
+```
+
+Use the **direct storage hostname** (`<ref>.storage.supabase.co`), not the
+project hostname: Supabase documents it as faster for uploads. Path-style
+addressing is required and already configured.
+
+The S3 access key pair from **Storage → S3 Configuration** bypasses RLS and
+grants full access to every bucket. It is server-side only. Never put it in a
+`NEXT_PUBLIC_*` variable, the frontend container, or a committed file.
+
+**Bucket setup** (already applied to this project):
+
+```sql
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES ('turio-resumes', 'turio-resumes', false, 5242880, ARRAY['application/pdf'])
+ON CONFLICT (id) DO NOTHING;
+```
+
+`public = false` means no anonymous URL exists. Every read goes through the API,
+which checks resume ownership in PostgreSQL first and verifies the SHA-256
+checksum before returning bytes. The size and MIME limits mirror the app's own
+guards (`max_resume_bytes` = 5 MiB, PDF only).
+
+Do not add `storage.objects` policies for `anon` or `authenticated`: the API
+authenticates with S3 keys, which bypass RLS entirely, so any policy would only
+widen browser-side exposure.
+
+### Object storage limits
+
+Supabase Storage applies a per-file limit that depends on plan (Free: 50 MB).
+5 MiB resumes are far below it. Egress is metered; resume downloads are small and
+served through the API, not directly from Storage.
+
 ## 1. Current native Windows development runtime (October 10, 2026)
 
 Local Docker/Compose support was removed under ADR-042. PostgreSQL and object storage
 remain required; the existing native setup runs them without Docker or WSL.
+Section 0 reinstates containers for deployment; this section remains the
+development runtime.
 
 From the repository root:
 
@@ -40,11 +144,11 @@ with the same backend environment before first use; import available jobs with
 browser automation disabled. `.runtime/native/` is ignored and must be retained
 or backed up separately; previous WSL accounts/data have not been recovered.
 
-S3rver is local development emulation, not a production MinIO replacement. Production
-still needs a separately validated database, S3-compatible storage, HTTPS, secrets
-and process supervision. GitHub Actions may use an isolated PostgreSQL container;
-this does not require local Docker. No CI execution or production resilience is
-established by removing container files.
+S3rver is local development emulation. Deployment uses Supabase Storage (section
+0); the native runtime keeps S3rver for offline work. Production still needs
+HTTPS, secrets and process supervision. GitHub Actions may use an isolated
+PostgreSQL container; this does not require local Docker. No CI execution or
+production resilience is established by removing container files.
 
 The older `.runtime/native/start.ps1` remains untouched, but use the tracked launcher
 above for current startup. History/checks: `D:/Projects/Sessions/10-10-2026/turio-docker-removal.md`.

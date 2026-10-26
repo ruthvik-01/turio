@@ -41,7 +41,7 @@ function stale() { return Response.json({ data: null, error: { code: 'STALE_REVI
     for (const changed of [
       { ...latest, fields: [{ ...app.fields[0], value: 'Other editor' }] },
       { ...latest, fields: [{ ...app.fields[0], input_type: 'checkbox' }] },
-      { ...latest, fields: [{ ...app.fields[0], value_source: 'jev_profile' }] },
+      { ...latest, fields: [{ ...app.fields[0], value_source: 'ai_profile' }] },
       { ...latest, fields: [{ ...app.fields[0], help_text: 'Salary in INR per month' }] },
       { ...latest, status: 'submitting' },
       { ...latest, fields: [] },

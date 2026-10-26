@@ -11,7 +11,7 @@ prepared-value approval is also available. Per-job holds, fresh immutable review
 tokens and idempotency remain enforced. Run approval lasts 15 minutes; changed,
 missing/unconfirmed or unsupported jobs remain pending. Stop finishes only the
 current job; uncertain submission outcomes are checked without mutation retries.
-Optional batch Jev consent sends employer metadata only and resets per action.
+Optional batch AI consent sends employer metadata only and resets per action.
 Supported fresh hosted transports can submit; other forms retain manual handoff.
 Preparation capability is not submission capability. Fixture verification does
 not establish company support. Answer once controls group equivalent required

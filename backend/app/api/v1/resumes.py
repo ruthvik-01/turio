@@ -12,7 +12,7 @@ from app.core.db import get_session
 from app.schemas.envelope import Envelope, envelope
 from app.schemas.resume import ResumeUploadResult
 from app.schemas.resume import ResumeData
-from app.schemas.jev import AssistanceConsent, ResumeSuggestions
+from app.schemas.assistance import AssistanceConsent, ResumeSuggestions
 from app.models.resume import Resume
 from app.services import resume_suggestions
 from app.services.resume_pipeline import ingest_resume

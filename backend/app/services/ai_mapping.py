@@ -2,7 +2,7 @@
 import json
 import re
 
-from app.adapters.jev import assistance, supported
+from app.adapters.assistance import assistance, supported
 from app.ml.scoring import digest
 
 INTENTS = {"full_name", "email", "phone", "location", "linkedin_url", "github_url", "portfolio_url", "resume"}

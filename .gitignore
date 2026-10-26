@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!.env.docker.example
 
 # Python
 __pycache__/
@@ -48,7 +49,6 @@ frontend inspo/
 docs/evidence/**/*.png
 docs/evidence/*.xml
 docs/evidence/qa_audit_20261014/
-docs/evidence/jev-live-pilot-2026-10-11.json
 docs/evidence/resume-layouts-2026-10-13.json
 docs/evidence/resume-heading-spacing-2026-10-13.json
 

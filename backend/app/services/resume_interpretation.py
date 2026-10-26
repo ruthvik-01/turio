@@ -1,4 +1,4 @@
-"""Jev classifies source-line roles; local code copies facts, never generates them."""
+"""The model classifies source-line roles; local code copies facts, never generates them."""
 import hashlib
 import json
 import re
@@ -8,7 +8,7 @@ from dataclasses import asdict
 from pydantic import ValidationError
 
 from app.schemas.profile import ProfileUpdateRequest
-from app.adapters.jev import supported, uncertain
+from app.adapters.assistance import supported, uncertain
 from app.services.resume_parser import (
     ParsedEducation, ParsedExperience, ParsedProject, _MONTH_YEAR,
     _NUMERIC_MONTH_YEAR, _PRESENT, _YEAR_ONLY, _dates_in, _parse_educations,

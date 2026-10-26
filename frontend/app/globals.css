@@ -651,6 +651,68 @@ summary {
     backdrop-filter: none
 }
 
+/* Frosted surface while a bulk run is in flight. */
+@supports ((backdrop-filter: blur(16px)) or (-webkit-backdrop-filter: blur(16px))) {
+    .panel.bulk-active,
+    .review-box.bulk-active {
+        background: var(--header-fill);
+        -webkit-backdrop-filter: blur(16px) saturate(140%);
+        backdrop-filter: blur(16px) saturate(140%);
+        box-shadow: var(--shadow-float);
+        border-color: var(--border-ui)
+    }
+}
+
+.run-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-height: 40px;
+    padding: 0 14px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-pill);
+    background: var(--neutral-soft);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    max-width: 220px;
+    min-width: 0
+}
+
+.run-indicator .spinner {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0
+}
+
+.run-indicator>span:last-child {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+@media(max-width:767px) {
+    .run-indicator {
+        width: 40px;
+        padding: 0;
+        justify-content: center;
+        max-width: 40px
+    }
+
+    .run-indicator>span:last-child {
+        display: none
+    }
+}
+
+@media(forced-colors:active) {
+    .run-indicator {
+        background: Canvas;
+        border-color: CanvasText
+    }
+}
+
 .workspace {
     padding-top: 40px;
     padding-bottom: 64px;
@@ -2222,6 +2284,16 @@ body:has(main.auth-layout) .atmosphere {
         display: none
     }
 
+    .panel.bulk-active,
+    .review-box.bulk-active {
+        background: var(--card);
+        background-image: none;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        border-color: var(--border-ui);
+        box-shadow: var(--shadow-card)
+    }
+
     .panel,
     .site-header,
     .site-header nav {
@@ -2248,6 +2320,16 @@ body:has(main.auth-layout) .atmosphere {
 
     .site-header:before {
         display: none
+    }
+
+    .panel.bulk-active,
+    .review-box.bulk-active {
+        background: Canvas;
+        background-image: none;
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        box-shadow: none;
+        border-color: CanvasText
     }
 
     .atmosphere {
@@ -2363,9 +2445,64 @@ summary:active {
     padding: 10px 0
 }
 
-.answer-summary dd {
-    overflow-wrap: anywhere;
-    white-space: pre-wrap
+.answer-summary dl {
+    margin: 8px 0 0;
+    max-height: 320px;
+    overflow-y: auto;
+    overscroll-behavior: contain
+}
+
+.answer-row {
+    display: grid;
+    grid-template-columns: minmax(0, 38%) minmax(0, 1fr);
+    gap: 16px;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--hairline)
+}
+
+.answer-row:last-child {
+    border-bottom: 0
+}
+
+.answer-row dt {
+    margin: 0;
+    min-width: 0;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.answer-row dd {
+    margin: 0;
+    min-width: 0;
+    font-size: 13px;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.answer-row .help {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: normal;
+    margin-top: 2px
+}
+
+@media(max-width:767px) {
+    .answer-summary dl {
+        max-height: 240px
+    }
+
+    .answer-row {
+        grid-template-columns: minmax(0, 45%) minmax(0, 1fr);
+        gap: 10px
+    }
 }
 
 /* How Turio works modal overlay (softui.md §5) */

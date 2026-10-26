@@ -6,7 +6,7 @@ import httpx
 import pytest
 from pydantic import SecretStr
 
-from app.adapters import jev, openrouter
+from app.adapters import assistance, openrouter
 from app.core.config import get_settings
 from app.services import resume_suggestions
 from support import auth_headers, upload_resume
@@ -18,7 +18,7 @@ ITEMS = [{'id': 'source-id', 'text': 'Toolbox\nPython, SQL', 'instruction': 'Cla
 
 def test_root_env_alias_is_read_without_other_credentials(tmp_path, monkeypatch):
     path = tmp_path/'private.env'
-    path.write_text('Open_Router=synthetic-openrouter-key\nTYPESAFE_API_KEY=not-used\n')
+    path.write_text('Open_Router=synthetic-openrouter-key\nUNUSED_PROVIDER_KEY=not-used\n')
     monkeypatch.setattr(openrouter, 'ROOT_ENV', path)
     assert openrouter.load_key().get_secret_value() == 'synthetic-openrouter-key'
 
@@ -37,7 +37,7 @@ async def test_chat_request_is_pinned_and_no_probability_is_invented(monkeypatch
         assert str(request.url) == openrouter.ENDPOINT
         return httpx.Response(200, json={'choices':[{'message':{'content':json.dumps({'answers':{'q0':'skills'}})}}],
             'usage':{'prompt_tokens':10,'completion_tokens':5}})
-    monkeypatch.setattr(jev, 'make_client', lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    monkeypatch.setattr(assistance, 'make_client', lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     op = openrouter.OpenRouterOperation(True, SecretStr('synthetic-openrouter-key'))
     result = await op.evaluate(ITEMS)
     assert result == {'source-id':{'choice':'skills','confidence':None,'winner_probability':None}}
@@ -49,27 +49,26 @@ async def test_chat_request_is_pinned_and_no_probability_is_invented(monkeypatch
 async def test_unoffered_ids_values_and_self_reported_scores_are_rejected(answers, monkeypatch):
     def handler(request):
         return httpx.Response(200, json={'choices':[{'message':{'content':json.dumps({'answers':answers})}}]})
-    monkeypatch.setattr(jev, 'make_client', lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    monkeypatch.setattr(assistance, 'make_client', lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     op = openrouter.OpenRouterOperation(True, SecretStr('synthetic-test'))
     assert await op.evaluate(ITEMS) == {}
     assert op.status == 'unavailable'
 
 
-async def test_provider_failure_never_falls_back_to_typesafe(monkeypatch):
+async def test_provider_failure_never_falls_back(monkeypatch):
     calls = []
     def handler(request):
         calls.append(str(request.url)); return httpx.Response(429, json={'error':{'message':'Synthetic rate limit'}})
-    monkeypatch.setattr(jev, 'make_client', lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
+    monkeypatch.setattr(assistance, 'make_client', lambda: httpx.AsyncClient(transport=httpx.MockTransport(handler)))
     op = openrouter.OpenRouterOperation(True, SecretStr('synthetic-test'))
     assert await op.evaluate(ITEMS) == {} and op.status == 'unavailable'
     assert calls == [openrouter.ENDPOINT]
 
 
 async def test_known_sections_share_one_openrouter_round(client, make_pdf, monkeypatch):
-    from test_jev_interpretation import SOURCE, choices
+    from test_ai_interpretation import SOURCE, choices
     settings = get_settings()
-    monkeypatch.setattr(settings, 'assistance_provider', 'openrouter')
-    monkeypatch.setattr(settings, 'jev_enabled', True)
+    monkeypatch.setattr(settings, 'assistance_enabled', True)
     monkeypatch.setattr(openrouter, 'load_key', lambda: SecretStr('synthetic-test'))
     calls = []
     async def evaluate(self, items):
@@ -93,8 +92,7 @@ async def test_known_sections_share_one_openrouter_round(client, make_pdf, monke
 
 async def test_openrouter_form_mapping_has_no_scores_and_requires_explicit_confirmation(client, flow, monkeypatch):
     settings = get_settings()
-    monkeypatch.setattr(settings, 'assistance_provider', 'openrouter')
-    monkeypatch.setattr(settings, 'jev_enabled', True)
+    monkeypatch.setattr(settings, 'assistance_enabled', True)
     monkeypatch.setattr(openrouter, 'load_key', lambda: SecretStr('synthetic-test'))
     headers, app, adapter = flow
     form = copy.deepcopy(FORM)
@@ -111,20 +109,19 @@ async def test_openrouter_form_mapping_has_no_scores_and_requires_explicit_confi
     assert response.status_code == 200
     data = response.json()['data']
     field = next(f for f in data['fields'] if f['field_key']=='phone')
-    assert field['value']=='123' and not field['user_confirmed'] and field['jev_uncertain']
-    assert field['jev_confidence'] is None and field['jev_winner_probability'] is None
-    event = next(e for e in data['events'] if e['event_type']=='jev_fields_mapped')
+    assert field['value']=='123' and not field['user_confirmed'] and field['ai_uncertain']
+    assert field['ai_confidence'] is None and field['ai_winner_probability'] is None
+    event = next(e for e in data['events'] if e['event_type']=='ai_fields_mapped')
     assert event['event_data']['provider']=='openrouter' and event['event_data']['model']==openrouter.MODEL
     confirmed = await client.post(prefix+'/answers',headers={**headers,'Idempotency-Key':'confirm-openrouter'},
-        json={'answers':[{'field_id':field['id'],'value':'123','jev_confirmed':True}]})
+        json={'answers':[{'field_id':field['id'],'value':'123','ai_confirmed':True}]})
     assert confirmed.status_code == 200
     assert next(f for f in confirmed.json()['data']['fields'] if f['field_key']=='phone')['user_confirmed']
 
 
 async def test_openrouter_consent_returns_uncertain_source_proposals_without_saving(client, make_pdf, monkeypatch):
     settings = get_settings()
-    monkeypatch.setattr(settings, 'assistance_provider', 'openrouter')
-    monkeypatch.setattr(settings, 'jev_enabled', True)
+    monkeypatch.setattr(settings, 'assistance_enabled', True)
     monkeypatch.setattr(openrouter, 'load_key', lambda: SecretStr('synthetic-test'))
     async def evaluate(self, items):
         result = {}

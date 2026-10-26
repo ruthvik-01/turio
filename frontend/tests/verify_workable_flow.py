@@ -69,7 +69,7 @@ def validated_settings():
     assert endpoint.scheme == "http" and endpoint.hostname in {"localhost", "127.0.0.1"}
     assert endpoint.port == 19000 and endpoint.path in {"", "/"}
     assert os.environ["BROWSER_AUTOMATION_ENABLED"] == "false"
-    assert os.environ["JEV_ENABLED"] == "false" and os.environ["MODEL_LOCAL_FILES_ONLY"] == "true"
+    assert os.environ["ASSISTANCE_ENABLED"] == "false" and os.environ["MODEL_LOCAL_FILES_ONLY"] == "true"
     assert all(not os.environ[k] for k in ["OPENROUTER_API_KEY", "TYPESAFE_API_KEY", "BEDROCK_MANTLE_API_KEY"])
     sys.path.insert(0, str(ROOT / "backend/tests"))
     sys.path.insert(0, str(ROOT / "backend"))
@@ -559,7 +559,7 @@ def run(args):
                "SECRET_KEY": uuid4().hex + uuid4().hex, "OBJECT_STORAGE_ENDPOINT": "http://127.0.0.1:19000",
                "OBJECT_STORAGE_BUCKET": bucket, "OBJECT_STORAGE_ACCESS_KEY": values["OBJECT_STORAGE_ACCESS_KEY"],
                "OBJECT_STORAGE_SECRET_KEY": values["OBJECT_STORAGE_SECRET_KEY"], "BROWSER_AUTOMATION_ENABLED": "false",
-               "JEV_ENABLED": "false", "ASSISTANCE_PROVIDER": "openrouter", "TYPESAFE_API_KEY": "", "OPENROUTER_API_KEY": "",
+               "ASSISTANCE_ENABLED": "false", "OPENROUTER_API_KEY": "",
                "OPENROUTER_MODEL": "", "BEDROCK_MANTLE_API_KEY": "", "BEDROCK_MANTLE_MODEL": "",
                "MODEL_LOCAL_FILES_ONLY": "true", "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1",
                "WORKER_POLL_SECONDS": "0.05", "RATE_LIMITS_ENABLED": "true", "AWS_EC2_METADATA_DISABLED": "true"}

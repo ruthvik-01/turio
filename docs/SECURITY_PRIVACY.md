@@ -2,7 +2,7 @@
 
 ## Private verification evidence
 
-Personal-sample reports `jev-live-pilot-2026-10-11.json`, `resume-layouts-2026-10-13.json`
+Personal-sample reports `resume-layouts-2026-10-13.json`
 and `resume-heading-spacing-2026-10-13.json` remain private local files, not GitHub
 artifacts. Raw QA screenshots, resumes, runtime settings and generated documents
 are also excluded. Public documentation retains historical verification counts,
@@ -95,8 +95,9 @@ FAILED
 Concrete retention periods remain a production-readiness decision. Define and record them before production deployment; do not claim a retention period that has not been approved.
 
 ## OpenRouter assistance — 2026-10-13
-The user selected free assistance; the fixed model is `dots-studio/dots-3-note-preview:free` instead of the
-TypeSafe API. Server code reads only its key aliases in the project-root `.env`;
+OpenRouter is the only assistance provider; the legacy TypeSafe integration was removed on
+2026-10-26. The fixed model is `dots-studio/dots-3-note-preview:free`.
+Server code reads only its key aliases in the project-root `.env`;
 no key enters browser code, prompts, public evidence or native configuration.
 Each action still needs consent; extracted source text may contain personal
 information, PDF bytes are not sent and proposals require explicit review/save.
@@ -108,12 +109,11 @@ The [privacy policy](https://openrouter.ai/privacy) states provider practices va
 and users must review their terms. No negotiated DPA/ZDR or deletion deadline is
 claimed. Synthetic-only live verification is authorized; no personal PDF transfer
 for tests. Unknown chat confidence/probability is null and always review-only;
-never simulate Jev's calibrated-looking scores. No TypeSafe or paid model fallback.
-ADR-046; historical TypeSafe evidence below remains attributed to that provider.
+never simulate calibrated-looking scores. No paid model fallback. ADR-046.
 
-## Jev assistance: external text transfer
+## AI assistance: external text transfer
 
-Optional TypeSafe assistance is disabled by default and requires explicit opt-in
+Optional AI assistance is disabled by default (`ASSISTANCE_ENABLED=false`) and requires explicit opt-in
 for each resume-suggestion or application-preparation action. Resume assistance
 sends candidate headings and nearby extracted text, potentially including personal
 information, but not PDF bytes. Form mapping sends employer labels, control types
@@ -138,30 +138,19 @@ consent checkboxes are excluded in code. Model outputs are suggestions requiring
 confirmation, not factual or safety guarantees. Logs contain only model/version,
 usage, duration and sanitized status; no prompts, credentials or provider bodies.
 
-As of 2026-10-10, live pilot approval and account-specific retention review remain
-open. The official legal index is https://docs.typesafe.ai/legal and model data
-handling is https://docs.typesafe.ai/models. A no-training statement does not mean
-requests are not retained; do not claim zero retention without applicable terms.
-Before live testing, record the actual account/DPA terms, retention period,
+Account-specific retention review remains open. A no-training statement does not
+mean requests are not retained; do not claim zero retention without applicable
+terms. Before live testing, record the actual account/DPA terms, retention period,
 subprocessors and deletion arrangements here. ADR-041 governs the implementation.
 
 ### Synthetic live pilot — 2026-10-11
 
-The user supplied a credential and explicitly authorized live Jev testing and
+The user supplied a credential and explicitly authorized live AI testing and
 fixes. The key is retained only in ignored native configuration, not this document
-or session history. Initial model listing authenticated successfully. Live
-inference uses synthetic resume/form text. The user subsequently selected one
-personal PDF and explicitly authorized transfer of selected heading/context excerpts.
-Its checks used isolated in-memory profile/storage; no native profile was changed.
-
-Reviewed public [DPA](https://typesafe.ai/legal/data-processing), Schedule I:
-retention is purpose/law dependent rather than a fixed number of days. The
-[privacy policy](https://typesafe.ai/legal/privacy-policy) allows retention while
-reasonably necessary and describes deletion/de-identification requests with legal
-exceptions. The [legal index](https://docs.typesafe.ai/legal) offers enterprise ZDR;
-this account's enterprise status or negotiated terms are not verified. The linked
-trust-center subprocessor list did not expose readable entries to the web tool;
-no list or deletion deadline is invented. No zero-retention claim is made.
+or session history. Live inference uses synthetic resume/form text. The user
+subsequently selected one personal PDF and explicitly authorized transfer of
+selected heading/context excerpts. Its checks used isolated in-memory
+profile/storage; no native profile was changed.
 
 Personal-data testing requires an identified user-selected resume and the
 existing per-action disclosure/consent. No real employer application has been

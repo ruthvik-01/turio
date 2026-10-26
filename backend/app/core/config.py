@@ -29,6 +29,10 @@ class Settings(BaseSettings):
     # MinIO and most S3-compatible servers ignore the region but the client
     # requires one to sign requests.
     object_storage_region: str = "us-east-1"
+    # Supabase Storage does not implement CreateBucket: buckets are provisioned
+    # through the dashboard or SQL. Set false there so the startup check stays
+    # read-only. True keeps the local development behaviour (MinIO/S3rver).
+    object_storage_ensure_bucket: bool = True
 
     max_resume_bytes: int = 5 * 1024 * 1024
 
@@ -42,10 +46,7 @@ class Settings(BaseSettings):
     model_cache_path: str = str(Path(__file__).resolve().parents[2] / ".model-cache")
     model_local_files_only: bool = True
     browser_automation_enabled: bool = False
-    jev_enabled: bool = False
-    assistance_provider: Literal["typesafe", "openrouter"] = "typesafe"
-    typesafe_api_key: SecretStr = Field(default=SecretStr(""), repr=False, exclude=True)
-    jev_model: Literal["jev-1.13.0"] = "jev-1.13.0"
+    assistance_enabled: bool = False
     browser_headless: bool = True
     browser_executable_path: str | None = None
     browser_timeout_seconds: int = 90

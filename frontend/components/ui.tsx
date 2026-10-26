@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
 import type { Job, Match } from "@/lib/types";
 import { useSession } from "./session";
+import { useBulkRun } from "./bulk-run";
 import { applyTheme, resolveTheme, type Theme } from "@/lib/theme";
 
 function ThemeToggle() {
@@ -24,8 +25,17 @@ function ThemeToggle() {
     }}><span className="theme-indicator" aria-hidden="true" /></button>;
 }
 
-const NAV_ITEMS: Array<[string, string, ReactNode]> = [
-  ["/home", "Home", <svg key="home" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1v-9.5Z" /></svg>],
+function RunIndicator() {
+  const { running, progress } = useBulkRun();
+  if (!running) return null;
+  return <Link href="/applications" className="run-indicator" aria-live="polite"
+    title={progress ? `Preparing ${progress.label}` : "Bulk applications running"}>
+    <span className="spinner" aria-hidden="true" />
+    <span>{progress ? `${progress.done}/${progress.total}` : "Working"}</span>
+  </Link>;
+}
+
+const NAV_ITEMS: Array<[string, string, ReactNode]> = [  ["/home", "Home", <svg key="home" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5.5v-6h-5v6H4a1 1 0 0 1-1-1v-9.5Z" /></svg>],
   ["/jobs", "Jobs", <svg key="jobs" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="7" width="18" height="13" rx="2.5" /><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>],
   ["/applications", "Applications", <svg key="applications" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1.5" /><path d="m9 14 2 2 4-4" /></svg>],
   ["/interviews", "Interviews", <svg key="interviews" aria-hidden="true" className="nav-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="17" rx="2.5" /><path d="M8 2v4M16 2v4M3 10h18" /></svg>],
@@ -125,6 +135,7 @@ export function Header() {
       </div>
     </nav>}
     <div className="header-actions">
+      {user && !publicPage && <RunIndicator />}
       {!publicPage && <ThemeToggle />}
       {user ? (
         <>

@@ -615,7 +615,7 @@ def build_master_technical_document():
         ["backend/app/repositories/", "Data Access Layer", "Clean SQL query execution, transaction locking, and database reads/writes."],
         ["backend/app/services/", "Business Logic", "State machines (applications.py), resume layout parser (resume_layout.py), form mapping (form_mapping.py)."],
         ["backend/app/ml/", "Machine Learning Core", "SBERT encoder (encoder.py), hybrid scoring formula (scoring.py), ranking weights (ranking.json)."],
-        ["backend/app/adapters/", "External Adapters", "Playwright Ashby ATS adapter (ashby.py, ashby_hosted.py), OpenRouter API, Jev mapping."],
+        ["backend/app/adapters/", "External Adapters", "Playwright Ashby ATS adapter (ashby.py, ashby_hosted.py), OpenRouter API, AI form mapping."],
         ["backend/app/workers/", "Durable Queue", "Background worker daemon (main.py) executing long-running runs with atomic lease fencing."],
         ["frontend/app/", "Next.js App Router", "Server & client page routes (/jobs, /profile, /applications, /interviews, /resources)."],
         ["frontend/components/", "React UI Layer", "Reusable interface components: bulk-applications.tsx, jobs.tsx, profile.tsx, auth-form.tsx."],

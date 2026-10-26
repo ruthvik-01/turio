@@ -21,7 +21,7 @@ export type JobPage = { jobs: Job[]; total: number; limit: number; offset: numbe
 export type Method = "keyword" | "tfidf" | "sbert";
 export type Match = { id: string; job: Job; method: Method; final_score: number; model_name: string; explanation: { summary: string; disclaimer: string; matched_skills: string[]; missing_skills: string[]; scores: Record<string, number | null> } };
 export type MatchPage = { matches: Match[]; total: number; stale: boolean };
-export type Field = { id: string; field_key: string; label: string; input_type: string; required: boolean; normalized_intent: string; options: { value: string; label: string }[]; help_text?: string | null; value: string | boolean | string[] | null; value_source: string; user_confirmed: boolean; jev_confidence?: number | null; jev_winner_probability?: number | null; jev_uncertain?: boolean };
+export type Field = { id: string; field_key: string; label: string; input_type: string; required: boolean; normalized_intent: string; options: { value: string; label: string }[]; help_text?: string | null; value: string | boolean | string[] | null; value_source: string; user_confirmed: boolean; ai_confidence?: number | null; ai_winner_probability?: number | null; ai_uncertain?: boolean };
 export type Application = {
   id: string; job: Job; application_url: string; status: string; outcome: string | null; notes: string | null;
   resume_id: string | null; revision: number;

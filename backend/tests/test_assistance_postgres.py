@@ -6,7 +6,8 @@ import pytest
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.adapters.jev import assistance
+from app.adapters.assistance import assistance
+from app.adapters import openrouter
 from app.core.config import get_settings
 from app.core.errors import AppError
 from app.repositories import profiles
@@ -86,8 +87,8 @@ async def test_resume_write_serializes_stale_correction(database_engine, client,
 
 async def test_advisory_limit_spans_independent_engines_and_releases(database_engine, client, monkeypatch):
     postgres_only(database_engine)
-    monkeypatch.setattr(get_settings(), 'jev_enabled', True)
-    monkeypatch.setattr(get_settings(), 'typesafe_api_key', SecretStr('mock-only'))
+    monkeypatch.setattr(get_settings(), 'assistance_enabled', True)
+    monkeypatch.setattr(openrouter, 'load_key', lambda: SecretStr('mock-only'))
     user_id, _ = await owner(client)
     other_engine = create_async_engine(database_engine.url)
     first = async_sessionmaker(database_engine)

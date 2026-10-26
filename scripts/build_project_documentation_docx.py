@@ -420,7 +420,7 @@ def build_documentation():
         ("Stage 2 — Semantic Profile Generation: ", "Normalizes skills, experiences, projects, education, and contact metadata into a versioned, privacy-controlled PostgreSQL candidate profile."),
         ("Stage 3 — Job Catalog & Ingestion: ", "Deduplicates and imports tens of thousands of job opportunities (56,339 verified active jobs across 3,448 companies) with source-backed deadlines and platform metadata."),
         ("Stage 4 — Multi-Stage Hybrid Matching: ", "Combines lexical keyword matching, TF-IDF scoring, and 384-dimensional Sentence-BERT embeddings (all-MiniLM-L6-v2) to generate transparent, explainable match scores."),
-        ("Stage 5 — Adaptive Form Mapping & Assistance: ", "Inspects external application forms, maps canonical candidate attributes, and selectively queries free AI models (via OpenRouter/Jev) for complex generative questions."),
+        ("Stage 5 — Adaptive Form Mapping & Assistance: ", "Inspects external application forms, maps canonical candidate attributes, and selectively queries free AI models (via OpenRouter) for complex generative questions."),
         ("Stage 6 — Guarded Application Automation: ", "Fills validated ATS forms (Ashby-hosted v2) via Playwright Chromium, strictly governed by single-use cryptographic permits, checksum-verified PDF uploads, and explicit user approvals."),
         ("Stage 7 — Application Tracking & Answer Reuse: ", "Maintains full state machine lifecycles (created → ready_for_review → submitted) with cross-application answer reuse, bulk fill controls, and manual audit trails.")
     ]
@@ -512,7 +512,7 @@ def build_documentation():
         ["job_matches", "id (UUID)", "user_id, job_id", "semantic_score, skill_score, final_score, explanation_payload (JSONB structured evidence)."],
         ["applications", "id (UUID)", "user_id, job_id, resume_id", "status (created..submitted), revision, review_token, review_snapshot (JSONB), submitted_at, outcome."],
         ["application_fields", "id (UUID)", "application_id → applications.id", "field_key, label, input_type, required, normalized_intent, source_locator, options (JSONB)."],
-        ["application_answers", "field_id (UUID)", "field_id → application_fields.id", "value (JSONB), value_source ('profile', 'user', 'jev_profile'), user_confirmed (bool)."],
+        ["application_answers", "field_id (UUID)", "field_id → application_fields.id", "value (JSONB), value_source ('profile', 'user', 'ai_profile'), user_confirmed (bool)."],
         ["saved_answers", "id (UUID)", "user_id → users.id", "question_key (hash of intent/label), value (JSONB). Enables 'Answer Once' across multiple applications."],
         ["application_events", "id (UUID)", "application_id → applications.id", "event_type, event_data (JSONB), created_at. Immutable audit ledger of all transitions."],
         ["idempotency_records", "key (String)", "user_id → users.id", "request_hash, response (JSONB snapshot), created_at. Guarantees safe replay of identical requests."]

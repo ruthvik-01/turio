@@ -34,8 +34,8 @@ class ResumeSuggestions(BaseModel):
     resume_id: UUID
     resume_checksum: str
     profile_version: int
-    model: str = "jev-1.13.0"
-    provider: str = "typesafe"
+    model: str = ""
+    provider: str = "openrouter"
     status: str
     suggestions: list[HeadingSuggestion]
     suggested_fields: dict

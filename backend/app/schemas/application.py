@@ -30,7 +30,7 @@ class AnswerInput(BaseModel):
     value: str | bool | list[str] | None
     user_confirmed: bool = True
     save_for_reuse: bool = True
-    jev_confirmed: bool = Field(default=False, strict=True)
+    ai_confirmed: bool = Field(default=False, strict=True)
 
 
 class PreparationRequest(BaseModel):
@@ -68,9 +68,9 @@ class FieldData(BaseModel):
     value: str | bool | list[str] | None = None
     value_source: str = "missing"
     user_confirmed: bool = False
-    jev_confidence: float | None = None
-    jev_winner_probability: float | None = None
-    jev_uncertain: bool = False
+    ai_confidence: float | None = None
+    ai_winner_probability: float | None = None
+    ai_uncertain: bool = False
 
 
 class EventData(BaseModel):

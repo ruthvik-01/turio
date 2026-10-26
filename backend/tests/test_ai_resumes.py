@@ -1,7 +1,7 @@
 import pytest
 
 from app.services import resume_suggestions
-from app.adapters import jev
+from app.adapters import assistance
 from support import auth_headers, upload_resume
 
 
@@ -45,8 +45,8 @@ async def test_owner_consent_and_heading_suggestions(client, make_pdf, monkeypat
         calls.extend(items)
         return {i['id']: {'choice': 'skills', 'confidence': 0.98, 'winner_probability': 0.99}
                 for i in items if 'Toolbox' in i['text']}
-    monkeypatch.setattr(jev.JevOperation, 'evaluate', evaluate)
-    other = await auth_headers(client, 'other-jev@example.com')
+    monkeypatch.setattr(assistance.AssistanceOperation, 'evaluate', evaluate)
+    other = await auth_headers(client, 'other-ai@example.com')
     assert (await client.post(path, headers=other, json={'consent': True})).status_code == 404
     assert (await client.post(path, headers=headers, json={'consent': False})).status_code == 422
     assert calls == []
@@ -61,7 +61,7 @@ async def test_owner_consent_and_heading_suggestions(client, make_pdf, monkeypat
     assert current['skills'] == uploaded['profile']['skills']
 
 
-async def test_jev_supplemental_sections_copy_source_without_saving(client, make_pdf, monkeypatch):
+async def test_ai_supplemental_sections_copy_source_without_saving(client, make_pdf, monkeypatch):
     headers = await auth_headers(client)
     uploaded = (await upload_resume(client, headers, make_pdf(
         'Synthetic Candidate\nsynthetic@example.com\n\nMy Credentials\n- First Source Certificate\n\n'
@@ -70,7 +70,7 @@ async def test_jev_supplemental_sections_copy_source_without_saving(client, make
         return {i['id']: {'choice': 'certifications' if i['text'].startswith('My Credentials') else 'achievements',
                           'confidence': 0.98, 'winner_probability': 0.99}
                 for i in items if i['text'].startswith(('My Credentials', 'Career Highlights'))}
-    monkeypatch.setattr(jev.JevOperation, 'evaluate', evaluate)
+    monkeypatch.setattr(assistance.AssistanceOperation, 'evaluate', evaluate)
     result = (await client.post(f"/api/v1/resumes/{uploaded['resume']['id']}/suggestions",
         headers=headers, json={'consent': True})).json()['data']
     assert result['suggested_fields']['certifications'] == ['First Source Certificate']
@@ -82,7 +82,7 @@ async def test_disabled_assistance_is_visible_and_never_calls_provider(client, m
     headers = await auth_headers(client)
     uploaded = (await upload_resume(client, headers, make_pdf('Candidate\n\nToolbox\nPython'))).json()['data']
     async def forbidden(*args): pytest.fail('Unexpected provider request')
-    monkeypatch.setattr(jev.JevOperation, 'request', forbidden)
+    monkeypatch.setattr(assistance.AssistanceOperation, 'request', forbidden)
     response = await client.post(f"/api/v1/resumes/{uploaded['resume']['id']}/suggestions", headers=headers, json={'consent': True})
     assert response.json()['data']['status'] == 'unavailable'
     assert response.json()['data']['suggestions'] == []
@@ -103,7 +103,7 @@ async def test_uncertain_heading_is_labeled_and_requires_editor_acceptance(clien
     uploaded=(await upload_resume(client,headers,make_pdf('Avery Example\navery@example.com\n\nToolbox\nPython, SQL'))).json()['data']
     async def evaluate(self,items):
         return {i['id']:{'choice':'skills','confidence':0.79,'winner_probability':0.83} for i in items if i['text'].startswith('Toolbox')}
-    monkeypatch.setattr(jev.JevOperation,'evaluate',evaluate)
+    monkeypatch.setattr(assistance.AssistanceOperation,'evaluate',evaluate)
     response=await client.post(f"/api/v1/resumes/{uploaded['resume']['id']}/suggestions",headers=headers,json={'consent':True})
     data=response.json()['data']
     assert data['suggestions'][0]['uncertain']

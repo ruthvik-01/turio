@@ -89,11 +89,11 @@ ADR.md
 
 Do not read every `.md` file for every task. Start with `PROGRESS.md`, then read only the documents mapped to the task in `CLAUDE.md`.
 
-## Jev assistance reference
+## AI assistance reference
 
 | File | Purpose |
 |---|---|
-| JEV_ASSISTANCE.md | Jev runtime configuration, transfer disclosure, candidate/confirmation behavior, limits and verification boundaries; governed by ADR-041 and SECURITY_PRIVACY. |
+Assistance configuration, transfer disclosure, candidate/confirmation behavior and limits are documented in ADR-041 and SECURITY_PRIVACY; the standalone `JEV_ASSISTANCE.md` was deleted on 2026-10-26.
 
 ## Hosted manual handoff evidence
 

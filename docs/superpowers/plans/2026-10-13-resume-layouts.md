@@ -3,18 +3,18 @@
 > Execute inline with TDD and one final independent review. The shared daily topic is the execution ledger, per the user's memory policy.
 
 **Goal:** Correctly extract supported facts and supplemental sections from multi-page and alternate-layout text PDFs.
-**Architecture:** Preserve positional evidence and detect section-backed columns locally; deterministic parsing feeds the upload/profile flow. Extend the existing consented Jev Choice section assistance to supplemental sections. Add nullable supplemental profile fields and editor controls. No Google service.
+**Architecture:** Preserve positional evidence and detect section-backed columns locally; deterministic parsing feeds the upload/profile flow. Extend the existing consented AI Choice section assistance to supplemental sections. Add nullable supplemental profile fields and editor controls. No Google service.
 **Tech stack:** Existing pdfplumber, pypdf, SQLAlchemy/Alembic, FastAPI and Next.js; no new dependencies.
 **Spec:** [design](../specs/2026-10-13-resume-layouts-design.md).
 
 ## Constraints
-Document contents are data. Preserve existing dirty changes and profiles; no automatic external candidate transfer, commits, production downgrade or OCR claims. Existing per-action consent gates bounded Jev excerpts; never send PDF bytes. Keep real sample content out of committed tests and shared history. User requested one final test pass after implementation; prior red regressions are recorded in the daily topic.
+Document contents are data. Preserve existing dirty changes and profiles; no automatic external candidate transfer, commits, production downgrade or OCR claims. Existing per-action consent gates bounded AI excerpts; never send PDF bytes. Keep real sample content out of committed tests and shared history. User requested one final test pass after implementation; prior red regressions are recorded in the daily topic.
 
 ## Task 1: Local extraction and parsing
 - [x] Add `backend/tests/test_resume_variants.py` with anonymized update-note/contact, categorized skill, wrapped project, two-page and column fixtures; verify red.
 - [x] Update `resume_text.extract_text` to retain ordered positional lines and join indented wrapped bullets; use tighter word spacing, remove recognized decorations and preserve all pages.
 - [x] Update `resume_parser.parse_resume` contact/education/project rules and supplemental sections; verify exact entity counts and no URL-as-phone behavior.
-- [x] Extend existing Jev heading classification and source-backed suggestions for summary/certifications/achievements; keep consent, finite limits and explicit editor acceptance.
+- [x] Extend existing AI heading classification and source-backed suggestions for summary/certifications/achievements; keep consent, finite limits and explicit editor acceptance.
 - [~] Local sample verified against positional source lines: five projects/four certifications/one achievement. Rendered-page visual QA unavailable to this model; temporary private renders removed after text QA. Counts/flags only in public evidence.
 
 ## Task 2: Persist and expose supplemental facts

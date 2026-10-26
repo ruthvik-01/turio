@@ -2,7 +2,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.services.jev_mapping import eligible
+from app.services.ai_mapping import eligible
 
 
 @pytest.mark.parametrize('label', ['Visa sponsorship', 'Age', 'Date of birth', 'Gender identity',

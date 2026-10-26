@@ -1,0 +1,17 @@
+# Build context is ./frontend.
+node_modules/
+.next/
+out/
+npm-debug.log*
+
+# Verification workspaces hold copies of the app and are ~550 MB.
+.verification/
+tests/
+
+# Local env files; the app reads INTERNAL_API_BASE_URL at runtime instead.
+.env
+.env.*
+!.env.example
+
+*.tsbuildinfo
+next-env.d.ts

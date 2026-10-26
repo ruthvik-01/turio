@@ -7,7 +7,7 @@ from pathlib import Path
 from dotenv import dotenv_values
 from pydantic import SecretStr
 
-from app.adapters import jev
+from app.adapters import assistance
 
 MODEL = 'dots-studio/dots-3-note-preview:free'
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
@@ -26,7 +26,7 @@ def load_key():
     return SecretStr('')
 
 
-class OpenRouterOperation(jev.JevOperation):
+class OpenRouterOperation(assistance.AssistanceOperation):
     provider = 'openrouter'
     model = MODEL
 
@@ -53,7 +53,7 @@ class OpenRouterOperation(jev.JevOperation):
             json.dumps(self.body(items), ensure_ascii=False, allow_nan=False).encode('utf-8')) <= 32768
 
     async def request(self, body):
-        async with jev.make_client() as client:
+        async with assistance.make_client() as client:
             async with client.stream('POST', ENDPOINT,
                 headers={'Authorization': 'Bearer ' + self._key.get_secret_value(), 'Content-Type': 'application/json'},
                 content=json.dumps(body, ensure_ascii=False, allow_nan=False).encode('utf-8'),
@@ -62,24 +62,24 @@ class OpenRouterOperation(jev.JevOperation):
                 raw = bytearray()
                 async for chunk in response.aiter_bytes(chunk_size=8192):
                     if len(raw) + len(chunk) > 65536:
-                        raise jev.InvalidResponse('Response exceeds assistance limit')
+                        raise assistance.InvalidResponse('Response exceeds assistance limit')
                     raw.extend(chunk)
         envelope = json.loads(raw)
         try:
             content = envelope['choices'][0]['message']['content']
             if not isinstance(content, str):
-                raise jev.InvalidResponse('Missing JSON choice content')
+                raise assistance.InvalidResponse('Missing JSON choice content')
             result = json.loads(content)
             questions = json.loads(body['messages'][1]['content'])['questions']
             if not isinstance(result, dict) or set(result) != {'answers'} or not isinstance(result['answers'], dict) or set(result['answers']) != set(questions):
-                raise jev.InvalidResponse('Unexpected questions')
+                raise assistance.InvalidResponse('Unexpected questions')
             decisions = {}
             for alias, choice in result['answers'].items():
                 if not isinstance(choice, str) or choice not in questions[alias]['criteria']:
-                    raise jev.InvalidResponse('Unexpected choice')
+                    raise assistance.InvalidResponse('Unexpected choice')
                 decisions[questions[alias]['source_id']] = {'choice': choice, 'confidence': None, 'winner_probability': None}
         except (KeyError, IndexError) as exc:
-            raise jev.InvalidResponse('Invalid chat completion') from exc
+            raise assistance.InvalidResponse('Invalid chat completion') from exc
         usage = envelope.get('usage', {})
         safe_usage = {key: value for key, value in usage.items() if key in {'prompt_tokens', 'completion_tokens'} and type(value) is int and value >= 0} if isinstance(usage, dict) else {}
         logger.info('assistance_decision', extra={'extra_fields': {'provider': self.provider, 'model': MODEL, 'usage': safe_usage}})

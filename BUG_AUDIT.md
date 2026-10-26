@@ -86,7 +86,7 @@ A total of **33 discrete test points** were audited, yielding **8 verified bugs*
 * **Expected Behavior:** Since the user already provided their LinkedIn URL in their profile/resume, the application should automatically resolve the field, mark it confirmed, and hide it from "Missing information" (placing it under "View filled answers").
 * **Actual Behavior:** The user is asked again: *"Please share your LinkedIn profile URL * Needs your confirmation"*.
 * **Root Cause:**
-  1. In `frontend/components/applications.tsx` line 12–16, `answered(field)` requires `field.user_confirmed === true`. When a field is populated from certain sources (like `jev_profile` or unconfirmed defaults), `user_confirmed` is `false`, so `answered()` evaluates to `false` and the field is forced into `visibleFields` ("Missing information").
+  1. In `frontend/components/applications.tsx` line 12–16, `answered(field)` requires `field.user_confirmed === true`. When a field is populated from certain sources (like `ai_profile` or unconfirmed defaults), `user_confirmed` is `false`, so `answered()` evaluates to `false` and the field is forced into `visibleFields` ("Missing information").
   2. In `backend/app/services/form_mapping.py`, `intent()` uses a static set of aliases in `ALIASES["linkedin_url"]`. Non-standard question labels (e.g., "Link to LinkedIn profile", "LinkedIn page") fail alias matching and fallback to `"custom"`, preventing the field from pulling the profile's `linkedin_url`.
 * **Recommended Solution:**
   1. In `form_mapping.py`, expand regex patterns for `linkedin_url` to match any label containing `linkedin`.
@@ -222,7 +222,7 @@ A total of **33 discrete test points** were audited, yielding **8 verified bugs*
 ### Question 1: "if my resume contains these fields why isnt it taking it again if data is availble donot ask me again"
 * **Technical Cause:**
   1. When a resume is uploaded, `resume_pipeline.py` extracts fields and saves them to `Profile`. If the parser regex missed the LinkedIn URL (e.g., formatting lacked `https://`), `profile.linkedin_url` was stored as `NULL`.
-  2. During application preparation (`start()` in `applications.py`), if `field.normalized_intent` is mapped via AI (`jev_profile`) or deemed unconfirmed, `field.user_confirmed` is set to `False`.
+  2. During application preparation (`start()` in `applications.py`), if `field.normalized_intent` is mapped via AI (`ai_profile`) or deemed unconfirmed, `field.user_confirmed` is set to `False`.
   3. In the UI (`applications.tsx` line 12–16), any field where `user_confirmed === false` is considered unanswered and is placed under **"Missing information"**, prompting the user again with *"Needs your confirmation"*.
 
 ### Question 2: "the info i type should be stored and must be used ofr future job applications"

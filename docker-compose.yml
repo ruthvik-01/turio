@@ -1,0 +1,125 @@
+# Turio — container deployment.
+#
+#   cp .env.docker.example .env.docker     # fill in real values
+#   docker compose --env-file .env.docker up -d --build
+#
+# PostgreSQL is Supabase (managed) and resume binaries live in Supabase Storage
+# through its S3-compatible endpoint. Neither runs in a container here: only the
+# API, the worker and the frontend do.
+#
+# No `version:` key — obsolete in Compose v2.
+
+services:
+  backend:
+    restart: unless-stopped
+    build: &backend-build
+      # Repository root: the image needs alembic/ and alembic.ini, which sit
+      # beside backend/ rather than inside it.
+      context: .
+      dockerfile: backend/Dockerfile
+      args:
+        INSTALL_ML: ${INSTALL_ML:-false}
+        INSTALL_BROWSER: ${INSTALL_BROWSER:-false}
+    environment: &backend-environment
+      APP_ENV: ${APP_ENV:-production}
+      APP_VERSION: ${APP_VERSION:-0.1.0}
+      # Supabase. Use the SESSION pooler (port 5432) or the direct connection,
+      # not the transaction pooler on 6543: Alembic and psycopg's prepared
+      # statements do not survive transaction-mode pooling.
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required - set the Supabase connection string}
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      # Supabase Storage S3 endpoint. Server-side only: these credentials never
+      # reach the browser, which talks to the Next.js proxy instead.
+      OBJECT_STORAGE_ENDPOINT: ${OBJECT_STORAGE_ENDPOINT:?OBJECT_STORAGE_ENDPOINT is required}
+      OBJECT_STORAGE_BUCKET: ${OBJECT_STORAGE_BUCKET:-turio-resumes}
+      OBJECT_STORAGE_ACCESS_KEY: ${OBJECT_STORAGE_ACCESS_KEY:?OBJECT_STORAGE_ACCESS_KEY is required}
+      OBJECT_STORAGE_SECRET_KEY: ${OBJECT_STORAGE_SECRET_KEY:?OBJECT_STORAGE_SECRET_KEY is required}
+      OBJECT_STORAGE_REGION: ${OBJECT_STORAGE_REGION:?OBJECT_STORAGE_REGION is required}
+      # Supabase Storage has no CreateBucket; the bucket is provisioned in the
+      # dashboard or by SQL. Keep this false so the startup check is read-only.
+      OBJECT_STORAGE_ENSURE_BUCKET: ${OBJECT_STORAGE_ENSURE_BUCKET:-false}
+      # Mounted read-only below. Absent is survivable: only POST /jobs/refresh
+      # reads it, and it reports the file as unavailable.
+      JOB_DATASET_PATH: ${JOB_DATASET_PATH:-/app/data/stapply-expanded-jobs.csv}
+      MODEL_CACHE_PATH: /app/.model-cache
+      MODEL_LOCAL_FILES_ONLY: ${MODEL_LOCAL_FILES_ONLY:-true}
+      BROWSER_AUTOMATION_ENABLED: ${BROWSER_AUTOMATION_ENABLED:-false}
+      BROWSER_HEADLESS: ${BROWSER_HEADLESS:-true}
+      BROWSER_AGENT_PRIMARY_PROVIDER: ${BROWSER_AGENT_PRIMARY_PROVIDER:-openrouter}
+      BROWSER_AGENT_FALLBACK_PROVIDER: ${BROWSER_AGENT_FALLBACK_PROVIDER:-bedrock_mantle}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-}
+      BEDROCK_MANTLE_API_KEY: ${BEDROCK_MANTLE_API_KEY:-}
+      BEDROCK_MANTLE_MODEL: ${BEDROCK_MANTLE_MODEL:-}
+      BEDROCK_MANTLE_REGION: ${BEDROCK_MANTLE_REGION:-}
+      BROWSER_AGENT_LLM_TIMEOUT_SECONDS: ${BROWSER_AGENT_LLM_TIMEOUT_SECONDS:-60}
+      BROWSER_AGENT_MAX_OUTPUT_TOKENS: ${BROWSER_AGENT_MAX_OUTPUT_TOKENS:-4096}
+      ASSISTANCE_ENABLED: ${ASSISTANCE_ENABLED:-false}
+      ANONYMIZED_TELEMETRY: "false"
+      WORKER_POLL_SECONDS: ${WORKER_POLL_SECONDS:-1}
+      WORKER_LEASE_SECONDS: ${WORKER_LEASE_SECONDS:-60}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes: &backend-volumes
+      # Read-only: ingestion reads the dataset, nothing writes to it.
+      - ./data:/app/data:ro
+      - ./backend/.model-cache:/app/.model-cache:ro
+    # Migrations run before the API so a fresh Supabase database is ready.
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    healthcheck:
+      # python:3.13-slim ships no curl, so the probe uses the interpreter.
+      test:
+        - CMD
+        - python
+        - -c
+        - |
+          import sys, urllib.request
+          try:
+              sys.exit(0 if urllib.request.urlopen("http://127.0.0.1:8000/api/v1/health", timeout=3).status == 200 else 1)
+          except Exception:
+              sys.exit(1)
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  worker:
+    restart: unless-stopped
+    build: *backend-build
+    environment:
+      <<: *backend-environment
+      # The ingestion/matching worker never dispatches browser agents.
+      OPENROUTER_API_KEY: ""
+      BEDROCK_MANTLE_API_KEY: ""
+      BROWSER_AUTOMATION_ENABLED: "false"
+    volumes: *backend-volumes
+    command: python -m app.workers.main
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  frontend:
+    restart: unless-stopped
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      # Server-side proxy target on the compose network. The browser never
+      # talks to the API directly: everything goes through /api/* on this app.
+      INTERNAL_API_BASE_URL: ${INTERNAL_API_BASE_URL:-http://backend:8000/api/v1}
+      NEXT_TELEMETRY_DISABLED: "1"
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s

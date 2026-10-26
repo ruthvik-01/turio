@@ -44,7 +44,7 @@ async def test_unconfirmed_optional_ai_does_not_block_required_answer_save(clien
     data = (await client.post(prefix + "/start", headers=headers)).json()["data"]
     optional = next(f for f in data["fields"] if f["field_key"] == "optional")
     session.add(ApplicationAnswer(field_id=UUID(optional["id"]), value="Unconfirmed legacy suggestion",
-        value_source="jev_profile", user_confirmed=False))
+        value_source="ai_profile", user_confirmed=False))
     await session.commit()
     required = next(f for f in data["fields"] if f["field_key"] == "authorization")
     saved = await client.post(prefix + "/answers", headers={**headers, "Idempotency-Key": "required-only"},

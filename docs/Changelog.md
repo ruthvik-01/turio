@@ -33,22 +33,22 @@
 - Verification and limits: [hosted submission](evidence/hosted-submission-2026-10-13.json). No real employer application submitted during testing.
 
 ## 2026-10-13 — Free OpenRouter provider
-- Switched active assistance to fixed free Dots with root `.env` key alias, strict offered-choice JSON, null/unverified scores and unchanged review/bulk guards. No paid/TypeSafe fallback or credential copy.
+- Switched active assistance to fixed free Dots with root `.env` key alias, strict offered-choice JSON, null/unverified scores and unchanged review/bulk guards. No paid fallback or credential copy.
 - Liquid privacy-filter404 and serial timeout diagnosed; kept privacy/deadline limits, disabled reasoning, combined questions and prevented false section boundaries from entry-role evidence.
 - 352 backend/78 PostgreSQL checks, one synthetic live case, build/typecheck and 14 UI groups pass. Native flag/restart healthy; no schema reset, personal PDF transfer or actual submissions. Evidence: [OpenRouter free](evidence/openrouter-free-2026-10-13.json).
 
-## 2026-10-13 — Jev source interpretation and bulk modes
-- Expanded opt-in Jev source-role classification with local validation/fallback and source spans; shared operation request budget, stale-profile protection and explicit accept/save. Key verified on synthetic text only.
+## 2026-10-13 — AI source interpretation and bulk modes
+- Expanded opt-in AI source-role classification with local validation/fallback and source spans; shared operation request budget, stale-profile protection and explicit accept/save. Key verified on synthetic text only.
 - Added review/eligible automatic bulk modes, per-job field previews/holds and explicit expiring batch approval while preserving individual review tokens/idempotency. Bound job identity and displayed values; no uncertain submission replay. Hosted final submission remains manual.
-- 342 backend/60 PostgreSQL checks, one live Jev case, build/typecheck, policy helper and 14 intercepted UI groups pass. Native stack restarted with retained data; no real applications submitted. Evidence: [Jev/bulk modes](evidence/jev-bulk-modes-2026-10-13.json).
+- 342 backend/60 PostgreSQL checks, one live AI case, build/typecheck, policy helper and 14 intercepted UI groups pass. Native stack restarted with retained data; no real applications submitted. The AI/bulk evidence record was deleted with the 2026-10-26 TypeSafe removal.
 
 ## 2026-10-13 — Letter-spaced resume follow-up
 - Fixed exact known character-spaced section aliases, multiline internship facts, degree-date captions, grouped skill qualifiers and visible bare domains; `rules-v6-heading-spacing` forces explicit reupload refresh. No invented social URLs.
 - 334 backend tests/35 PostgreSQL tests and both supplied PDF checks pass; runtime restarted, health/login 200. No Google/provider calls, native sample-profile overwrite or frontend/schema change.
 - Evidence: [private heading-spacing evidence availability](SECURITY_PRIVACY.md#private-verification-evidence); shared daily topic remains `D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`.
 
-## 2026-10-13 — Varied resume layouts, local extraction + Jev only
-- Added positional page/column reading order, source contact/project guards and editable supplemental profile facts; no Google service or automatic cloud transfer. Additive migration `a231013001`, parser `rules-v5-multipage`; opt-in Jev suggestions retain explicit review.
+## 2026-10-13 — Varied resume layouts, local extraction + AI only
+- Added positional page/column reading order, source contact/project guards and editable supplemental profile facts; no Google service or automatic cloud transfer. Additive migration `a231013001`, parser `rules-v5-multipage`; opt-in AI suggestions retain explicit review.
 - 329 backend tests, 30 PostgreSQL API tests, migration/drift, typecheck/build and four intercepted UI groups pass. Native migration/restart preserves existing candidate data. Sample retained five projects/four certifications/one achievement; visual and new live-provider verification remain unclaimed.
 - Evidence: [private resume-layout evidence availability](SECURITY_PRIVACY.md#private-verification-evidence); history: `D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`. Reupload older resumes and review; uncommitted changes retained.
 
@@ -277,15 +277,15 @@ Read-only Supabase Application-tab inspection confirmed a JavaScript/API form wi
 - Fresh checks: 230 backend tests passed, 18 skipped; structure, PowerShell syntax/preflight/reentry and diff checks passed. API/login HTTP 200 and all four managed service processes running. Fresh provisioning, optional integration/remote CI and reboot resilience not claimed.
 - Detail: `D:/Projects/Sessions/10-10-2026/turio-docker-removal.md`.
 
-## 2026-10-11 — Jev functional integration
-- Owner-only heading suggestions, atomic stale-save checks, opt-in field mapping and explicit Jev confirmation/provenance implemented; ADR-041/privacy recorded.
+## 2026-10-11 — AI assistance integration
+- Owner-only heading suggestions, atomic stale-save checks, opt-in field mapping and explicit AI confirmation/provenance implemented; ADR-041/privacy recorded.
 - Strict pinned adapter, shared work/advisory limits and bounded source/request/response handling; no product dependency or migration.
-- Mocked API/UI and isolated PostgreSQL verification; live TypeSafe, retention review and employer/human acceptance remain open. Details: [JEV_ASSISTANCE.md](JEV_ASSISTANCE.md); shared history: D:/Projects/Sessions/11-10-2026/turio-jev-completion.md.
+- Mocked API/UI and isolated PostgreSQL verification; retention review and employer/human acceptance remain open. Shared history: D:/Projects/Sessions/11-10-2026/turio-jev-completion.md.
 
-### 2026-10-11 ? Authorized Jev pilot
+### 2026-10-11 ? Authorized AI pilot
 - Direct question-source binding and type-aware form semantics; review-only uncertain suggestions retain confirmation/provenance.
 - Local positional PDF reading order, contact annotation boundaries and grouped skill/job/education fixes; parser rules-v3-layout.
-- Verification: `evidence/jev-live-pilot-2026-10-11.json`; shared history `D:/Projects/Sessions/11-10-2026/turio-jev-live-pilot.md`.
+- Verification evidence was deleted with the 2026-10-26 TypeSafe removal; shared history `D:/Projects/Sessions/11-10-2026/turio-jev-live-pilot.md`.
 
 ## 2026-10-12 — Hosted agent preparation and manual filling
 

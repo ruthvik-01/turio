@@ -3,6 +3,16 @@
 DATABASE.md section 1 keeps the file itself out of PostgreSQL; only the storage
 key is stored. boto3 is synchronous, so every call is handed to a worker thread
 rather than blocking the event loop.
+
+The client speaks plain S3, so the same code serves MinIO in development and
+Supabase Storage in deployment. Two provider differences are handled explicitly:
+
+* Supabase Storage does not implement CreateBucket. Its buckets are provisioned
+  through the dashboard or SQL, so `ensure_bucket` is disabled there and the
+  startup check becomes a read-only HeadBucket.
+* botocore 1.43 adds `x-amz-checksum-*` headers to PutObject by default. Several
+  S3-compatible providers reject them, so checksums are only calculated when the
+  operation actually requires one.
 """
 
 import asyncio
@@ -29,8 +39,10 @@ class ObjectStorage:
         secret_key: str,
         region: str,
         bucket: str,
+        ensure_bucket: bool = True,
     ) -> None:
         self._bucket = bucket
+        self._ensure_bucket_enabled = ensure_bucket
         self._bucket_checked = False
         self._client = boto3.client(
             "s3",
@@ -42,8 +54,10 @@ class ObjectStorage:
                 connect_timeout=_CONNECT_TIMEOUT_SECONDS,
                 read_timeout=_READ_TIMEOUT_SECONDS,
                 signature_version="s3v4",
-                # MinIO serves path-style addressing by default; virtual-host
-                # style would try to resolve the bucket as a subdomain.
+                request_checksum_calculation="when_required",
+                # MinIO and Supabase Storage both serve path-style addressing;
+                # virtual-host style would try to resolve the bucket as a
+                # subdomain of the storage host.
                 s3={"addressing_style": "path"},
             ),
         )
@@ -53,7 +67,7 @@ class ObjectStorage:
         return self._bucket
 
     async def _ensure_bucket(self) -> None:
-        """Create the bucket on first use.
+        """Verify the bucket exists, creating it only when allowed.
 
         Done lazily rather than at startup so that object storage being down
         cannot stop the API from booting.
@@ -61,13 +75,18 @@ class ObjectStorage:
         if self._bucket_checked:
             return
 
-        def _head_then_create() -> None:
+        def _head_then_maybe_create() -> None:
             try:
                 self._client.head_bucket(Bucket=self._bucket)
             except ClientError:
+                if not self._ensure_bucket_enabled:
+                    # The bucket is provisioned out of band (Supabase Storage).
+                    # Let the caller's operation surface the real error rather
+                    # than attempting an unsupported CreateBucket.
+                    raise
                 self._client.create_bucket(Bucket=self._bucket)
 
-        await asyncio.to_thread(_head_then_create)
+        await asyncio.to_thread(_head_then_maybe_create)
         self._bucket_checked = True
 
     async def put(self, key: str, data: bytes, content_type: str) -> None:

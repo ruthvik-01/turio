@@ -41,12 +41,11 @@ Hosted Ashby preparation accepts valid company posting URLs and prepares saved p
 - Evidence: [hosted submission](evidence/hosted-submission-2026-10-13.json). History: [shared session](D:/Projects/Sessions/14-10-2026/turio-hosted-auto-submit.md). Current next step: refresh Jobs, select Automatic submission, Start automatic applications; answer missing shared questions once and Start remaining jobs again.
 
 ## Current provider — 2026-10-13
-OpenRouter replaces the active TypeSafe provider, using fixed free
+OpenRouter is the only assistance provider (legacy TypeSafe removed 2026-10-26), using fixed free
 `dots-studio/dots-3-note-preview:free` and the root `.env` `Open_Router` key alias.
-Native `ASSISTANCE_PROVIDER=openrouter`, assistance enabled; key never copied or
-displayed. Profile button: 'Interpret resume with AI'. Unavailable confidence/
-probability scores are null, all proposals require review. No paid/TypeSafe
-fallback, Google OCR or actual employer submissions. Local PDF extraction and
+Native `ASSISTANCE_ENABLED`; key never copied or displayed. Profile button:
+'Interpret resume with AI'. Unavailable confidence/probability scores are null, all
+proposals require review. No paid fallback, Google OCR or actual employer submissions. Local PDF extraction and
 existing bulk/manual submission safeguards remain.
 
 352 backend/78 PostgreSQL checks, one synthetic live case (8.27s), frontend build/
@@ -56,8 +55,8 @@ remain unverified. Evidence: [OpenRouter free](evidence/openrouter-free-2026-10-
 History: [provider switch](D:/Projects/Sessions/13-10-2026/turio-openrouter-switch.md).
 Next: Profile → Interpret resume with AI, then review and save.
 
-## Prior Jev/bulk checkpoint — 2026-10-13
-'Interpret resume with Jev' now classifies section-owned source facts, not only
+## Prior AI/bulk checkpoint — 2026-10-13
+'Interpret resume with AI' now classifies section-owned source facts, not only
 unknown headings, with local fallback, bounded shared requests and explicit
 accept/save. The existing server key passed a synthetic live check; no personal
 PDF transfer. Jobs supports fill-and-review or eligible automatic submission with
@@ -67,16 +66,16 @@ final submission/CAPTCHA/custom controls remain manual; no real-company support
 claim. No new tables/routes/dependencies.
 
 342 backend/60 PostgreSQL checks, frontend typecheck/build, native policy check,
-one synthetic live Jev case and 14 intercepted UI groups pass. API/frontend/
+one synthetic live AI case and 14 intercepted UI groups pass. API/frontend/
 worker running, health/login 200; native data/schema retained. Author self-review
-only, changes uncommitted. Evidence: [Jev and bulk modes](evidence/jev-bulk-modes-2026-10-13.json).
+only, changes uncommitted. Evidence: the AI/bulk evidence record was deleted with the 2026-10-26 TypeSafe removal.
 Next: try Profile interpretation or select the Jobs bulk mode; retain manual
 submission for hosted forms. Shared detail:
-[Jev](D:/Projects/Sessions/13-10-2026/turio-jev-interpretation.md) ·
+[AI](D:/Projects/Sessions/13-10-2026/turio-jev-interpretation.md) ·
 [bulk](D:/Projects/Sessions/13-10-2026/turio-bulk-apply-modes.md).
 
 ## Latest resume layout checkpoint — 2026-10-13
-Local text-PDF extraction plus opt-in Jev only; no Google service (ADR-044).
+Local text-PDF extraction plus opt-in AI only; no Google service (ADR-044).
 Positional rows/section-backed columns and multi-page facts use
 `rules-v6-heading-spacing`. Exact letter-spaced heading aliases, multiline
 internship metadata, degree dates and grouped skills are handled locally.
@@ -93,7 +92,7 @@ and remain null. No sample-profile write/provider call. Additive migration/drift
 and preceding frontend typecheck/build/four intercepted UI groups pass. Native migration
 `a231013001` applied with existing account/profile values preserved; API/frontend/
 worker restarted, health/login 200. Author self-review only; visual QA unavailable,
-new supplemental live Jev/unknown-layout accuracy unverified. Historical phase
+new supplemental live AI/unknown-layout accuracy unverified. Historical phase
 and live/human gates below remain open. Evidence:
 [private resume-layout evidence availability](SECURITY_PRIVACY.md#private-verification-evidence).
 Follow-up evidence: [private heading-spacing evidence availability](SECURITY_PRIVACY.md#private-verification-evidence).
@@ -189,12 +188,12 @@ The existing WSL disk is missing. A separate native development runtime now runs
 
 This is a fresh database; previous WSL accounts/resumes have not been recovered. The existing expanded job CSV is being imported in the background. Seven native smoke checks passed (proxy registration/session, upload/profile, listing and stored PDF bytes); API/proxy health returned 200. Automation remains disabled. Local settings and data stay in ignored `.runtime/native/`; do not publish its credentials. Runtime evidence: `.runtime/native/verification.json`. Shared history: `D:/Projects/Sessions/10-10-2026/college-turio-orientation.md`.
 
-## Jev assistance — 2026-10-11
-Bounded resume-heading suggestions and unfamiliar non-sensitive form mapping now have mocked backend/UI and isolated PostgreSQL coverage. Every action opts in; suggestions require explicit acceptance/confirmation. Profile saves compare expected versions atomically; application provenance binds profile/resume/form versions. TypeSafe remains disabled by default, with no live calls or employer support claim. No new tables/dependencies/cache. ADR-041 and SECURITY_PRIVACY govern transfer/retention; JEV_ASSISTANCE documents behavior and limits. Current handoff: D:/Projects/Sessions/11-10-2026/turio-jev-completion.md.
+## AI assistance — 2026-10-11
+Bounded resume-heading suggestions and unfamiliar non-sensitive form mapping now have mocked backend/UI and isolated PostgreSQL coverage. Every action opts in; suggestions require explicit acceptance/confirmation. Profile saves compare expected versions atomically; application provenance binds profile/resume/form versions. Assistance remains disabled by default, with no live calls or employer support claim. No new tables/dependencies/cache. ADR-041 and SECURITY_PRIVACY govern transfer/retention. Current handoff: D:/Projects/Sessions/11-10-2026/turio-jev-completion.md.
 
-Final Jev evidence: default backend 255 passed/22 opt-in skips; PostgreSQL 18 passed; native browser fixtures 17 passed/one cleanup warning; four production UI groups and build pass. Native API/frontend health 200; flags remain off. See docs/evidence/jev-functional-2026-10-11.json. Implementation remains uncommitted; no live pilot authorized.
+Final AI evidence: default backend 255 passed/22 opt-in skips; PostgreSQL 18 passed; native browser fixtures 17 passed/one cleanup warning; four production UI groups and build pass. Native API/frontend health 200; flags remain off. The functional evidence record was deleted with the 2026-10-26 TypeSafe removal. Implementation remains uncommitted; no live pilot authorized.
 
-Jev live pilot (2026-10-11): authorized native configuration enabled; uncertain suggestions require review, local PDF layout fixes verified. Reupload older resumes to refresh parser version. See `JEV_ASSISTANCE.md`, `evidence/jev-live-pilot-2026-10-11.json`, and `D:/Projects/Sessions/11-10-2026/turio-jev-live-pilot.md`. No real-company submission/acceptance proof.
+AI live pilot (2026-10-11): authorized native configuration enabled; uncertain suggestions require review, local PDF layout fixes verified. Reupload older resumes to refresh parser version. See `D:/Projects/Sessions/11-10-2026/turio-jev-live-pilot.md`; the dedicated assistance document and live-pilot evidence were deleted on 2026-10-26. No real-company submission/acceptance proof.
 
 ## Answer reuse and bulk preparation — 2026-10-13
 Resume/profile facts and confirmed authored answers now fill recognized questions automatically. Stored parsed resumes and prior confirmed answers provide fallback without reupload. Missing-only prompts have an editable filled-answer summary. Jobs/matches support sequential bulk preparation, retry/stop and saved application links; each application retains its final reviewed approval. No schema/dependency changes. Shared detail: [turio-answer-reuse-bulk.md](D:/Projects/Sessions/13-10-2026/turio-answer-reuse-bulk.md).

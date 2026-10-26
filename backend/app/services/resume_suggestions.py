@@ -1,4 +1,4 @@
-"""Transient, explicitly accepted Jev source interpretation and local fallback."""
+"""Transient, explicitly accepted AI source interpretation and local fallback."""
 import hashlib
 import re
 from dataclasses import asdict
@@ -6,11 +6,11 @@ from uuid import UUID
 
 from sqlalchemy import select
 
-from app.adapters.jev import assistance, supported, uncertain
+from app.adapters.assistance import assistance, supported, uncertain
 from app.core.errors import AppError
 from app.models.resume import Resume
 from app.models.profile import Profile
-from app.schemas.jev import ResumeSuggestions
+from app.schemas.assistance import ResumeSuggestions
 from app.services.profile import get_profile
 from app.services import resume_interpretation
 from app.services.resume_parser import SECTION_ALIASES, _section_for, parse_resume

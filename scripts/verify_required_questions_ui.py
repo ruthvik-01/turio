@@ -19,7 +19,7 @@ async def main(url, output):
         "status": "needs_input", "application_url": "https://employer.invalid/job", "resume_id": "resume",
         "fields": [field("salary", "Expectation Salary per annum", True, help_text="Currency: not specified by employer. Pay period: annual. Include currency, e.g. USD 120000/year or INR 1200000/year."),
                    field("cover", "Optional cover letter", False, input_type="textarea"),
-                   field("ai", "Optional AI suggestion", False, "Unconfirmed suggestion", "jev_profile"),
+                   field("ai", "Optional AI suggestion", False, "Unconfirmed suggestion", "ai_profile"),
                    field("name", "Name", True, "Synthetic Candidate", "profile", True)],
         "missing_fields": ["Expectation Salary per annum"], "readiness_score": .5, "review_token": None,
         "notes": None, "outcome": None, "events": [], "submission_method": None, "submitted_at": None}

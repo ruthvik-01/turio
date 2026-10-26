@@ -10,6 +10,7 @@ import { Select } from "./select";
 import { Badge, Empty, JobCard, Loading, Notice, PageHeading, Pagination, Workspace } from "./ui";
 
 import { BulkApplications } from "./bulk-applications";
+import { useBulkRun } from "./bulk-run";
 
 export function Jobs() {
   const { user } = useSession();
@@ -27,12 +28,19 @@ export function Jobs() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selected, setSelected] = useState<Record<string, Job>>({});
+  const run = useBulkRun();
   function removeUnavailableJob(id: string) {
     setSelected(items=>{ const next={...items}; delete next[id]; return next; });
     setJobs(page=>page ? {...page,jobs:page.jobs.filter(item=>item.id!==id),total:Math.max(0,page.total-1)} : page);
     setMatches(page=>page ? {...page,matches:page.matches.filter(item=>item.job.id!==id),total:Math.max(0,page.total-1)} : page);
     setVersion(value=>value+1);
   }
+  useEffect(() => {
+    const ids = Object.keys(run.unavailable);
+    if (!ids.length) return;
+    ids.forEach(removeUnavailableJob);
+    run.acknowledgeUnavailable(ids);
+  }, [run.unavailable]);
   useEffect(() => {
     if (!user) return;
     let active = true;
@@ -115,7 +123,7 @@ export function Jobs() {
       )}
     {error && <Notice kind="error">{error}</Notice>}{notice && <Notice>{notice}</Notice>}
     <BulkApplications selected={selected} onSelect={setSelected} visibleJobs={visibleJobs} loading={loading}
-      externalBusy={busy} onBusyChange={setBusy} onUnavailable={removeUnavailableJob} />
+      externalBusy={busy} onBusyChange={setBusy} />
     {loading ? <Loading /> : tab === "all" ? jobs && (jobs.jobs.length ? <><div className="job-grid">{jobs.jobs.map(job => <JobCard key={job.id} job={job} selection={jobSelection(job)} />)}</div><Pagination offset={offset} total={jobs.total} onChange={setOffset} /></> :
       <Empty title="No jobs found">No jobs match these filters, or your job inventory has not been imported yet. Try a broader search or refresh the configured dataset.</Empty>) :
       matches && (matches.matches.length ? <><p className="small muted" style={{ marginBottom: 20 }}>Scores describe relevance, not hiring probability. Open an opportunity to see the evidence.</p><div className="job-grid">{matches.matches.map(match => <JobCard key={match.id} job={match.job} match={match} selection={jobSelection(match.job)} />)}</div><Pagination offset={offset} total={matches.total} onChange={setOffset} /></> :

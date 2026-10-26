@@ -291,27 +291,28 @@ appear in the user's Chrome. All phase statuses must distinguish implementation
 from unmet acceptance evidence. No synthetic benchmark freeze/evaluation.
 **Evidence:** [[evidence/phase-tooling-2026-09-17]].
 
-### ADR-041 — Opt-in bounded Jev assistance
+### ADR-041 — Opt-in bounded AI assistance
 
 Date: 2026-10-10. Status: accepted for mocked implementation; live pilot not authorized.
+Amended 2026-10-26: the legacy TypeSafe provider was removed; OpenRouter is the only provider.
 
-Jev classifies previously unknown resume headings and non-sensitive application
+The model classifies previously unknown resume headings and non-sensitive application
 field intents. Local code owns candidate spans, parsing, validation, user edits,
 browser execution and submission authorization. Each action requires explicit
 opt-in before text transfer. PDF bytes and profile values are never sent for
 form mapping. Resume requests send only candidate headings and nearby text;
 these excerpts may contain personal information.
 
-Use pinned `jev-1.13.0`, strict response validation, bounded requests, shared work
-limits and one outbound operation per user. All suggestions require explicit
-confirmation. Profile saves use atomic expected-version checks; application
-events retain Jev provenance. No tables or persistent suggestion cache are added.
+Use strict response validation, bounded requests, shared work limits and one
+outbound operation per user. All suggestions require explicit confirmation.
+Profile saves use atomic expected-version checks; application events retain
+provenance. No tables or persistent suggestion cache are added.
 
-Credentials stay server-side and assistance defaults off. No live provider calls
-or claims of extraction effectiveness follow from mocked fixtures. Applicable
-TypeSafe account/DPA retention terms must be reviewed and recorded before a
-separately authorized live pilot; no-training statements do not establish zero
-retention. See `SECURITY_PRIVACY.md` and shared history:
+Credentials stay server-side and assistance defaults off (`ASSISTANCE_ENABLED=false`).
+No live provider calls or claims of extraction effectiveness follow from mocked
+fixtures. Applicable provider account/DPA retention terms must be reviewed and
+recorded before a separately authorized live pilot; no-training statements do
+not establish zero retention. See `SECURITY_PRIVACY.md` and shared history:
 `D:/Projects/Sessions/10-10-2026/turio-jev-implementation.md`.
 
 ### ADR-042 — Native Windows development without local Docker
@@ -356,16 +357,16 @@ are not closure. No migration/dependency changes. Evidence:
 ### ADR-046 — Fixed free OpenRouter assistance instead of TypeSafe
 Date: 2026-10-13. Status: user selected free model; synthetic/backend/UI verified and native runtime switched.
 Use `dots-studio/dots-3-note-preview:free` with OpenRouter chat-completion JSON schema choices. The initially proposed Liquid free endpoint rejected `data_collection=deny`; chose a responding free endpoint instead of weakening privacy controls. Read the server-only key from the project-root `.env` (`OPENROUTER_API_KEY` or existing `Open_Router`), not unrelated process credentials; do not copy it into frontend/native settings. No router/paid/TypeSafe fallback. Require structured-parameter support and `data_collection=deny`; do not claim account-specific zero retention.
-Chat models do not expose Jev's classifier probabilities. Return null scores and mark every OpenRouter proposal uncertain instead of inventing them. Keep legacy `jev_*` fields/events, now with actual provider/model provenance, explicit acceptance/confirmation, source-only values and existing request/concurrency/submission guards. No new routes/tables/dependencies. History: `D:/Projects/Sessions/13-10-2026/turio-openrouter-switch.md`.
+Chat models do not expose classifier probabilities. Return null scores and mark every OpenRouter proposal uncertain instead of inventing them. Keep the `ai_*` fields/events with actual provider/model provenance, explicit acceptance/confirmation, source-only values and existing request/concurrency/submission guards. No new routes/tables/dependencies. (The `jev_*` names were renamed to `ai_*` on 2026-10-26 when TypeSafe was removed.) History: `D:/Projects/Sessions/13-10-2026/turio-openrouter-switch.md`.
 
-### ADR-045 — Review-only Jev fact interpretation and bounded bulk approval
+### ADR-045 — Review-only AI fact interpretation and bounded bulk approval
 Date: 2026-10-13. Status: user-approved bounded feature scope; verification pending.
 Expand the existing opt-in resume-suggestions endpoint to classify source-line roles, then copy validated section-owned facts locally. Incomplete/excluded/failed sections retain local/manual fallback; contact/legal/preference facts remain local. The two phases share the same advisory lock, 15-second deadline and three-request budget. No generated values, new tables or automatic personal-PDF transfer.
 Bulk UI supports fill-and-review or explicit batch approval of eligible applications. Reuse existing per-application immutable review tokens, approval, idempotency and submission checks; no new submission queue/engine. Approval binds shown application/job/profile/resume/field values and expires after 15 minutes. Held, unconfirmed, changed or manual-hosted jobs stay pending; uncertain submissions do not replay. No live-company support claim follows from fixture checks. History: `D:/Projects/Sessions/13-10-2026/turio-jev-interpretation.md` and `turio-bulk-apply-modes.md`.
 
-### ADR-044 — Varied text-PDF layouts with local extraction and Jev only
+### ADR-044 — Varied text-PDF layouts with local extraction and AI only
 Date: 2026-10-13. Status: accepted by explicit user instruction.
-Local positional words/sections determine page and column reading order. Preserve source-backed application email (separate from login email), summary, certifications and achievements in nullable profile columns. The existing opt-in Jev Choice service classifies unfamiliar sections, including supplemental sections; no Google service or PDF/image transfer. Unreadable text pages reject before profile mutation; manual review remains mandatory and universal PDF accuracy is not claimed. Additive migration preserves old rows; no destructive runtime downgrade. Spec: `superpowers/specs/2026-10-13-resume-layouts-design.md`; history: `D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`.
+Local positional words/sections determine page and column reading order. Preserve source-backed application email (separate from login email), summary, certifications and achievements in nullable profile columns. The existing opt-in AI Choice service classifies unfamiliar sections, including supplemental sections; no Google service or PDF/image transfer. Unreadable text pages reject before profile mutation; manual review remains mandatory and universal PDF accuracy is not claimed. Additive migration preserves old rows; no destructive runtime downgrade. Spec: `superpowers/specs/2026-10-13-resume-layouts-design.md`; history: `D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`.
 
 ### ADR-048 — Atmos-inspired shared frontend skin and local theme
 
@@ -387,6 +388,6 @@ Login correction includes starting only the existing PostgreSQL18543/API18080 ru
 
 History: [daily correction topic](../../../Projects/Sessions/20-10-2026/turio-atmos-redesign.md).
 
-### ADR-043 ? Authorized Jev pilot and review-only uncertainty
-Date: 2026-10-11. Status: accepted by explicit user instruction.
-The user authorized the supplied server credential, synthetic fixture tests, and selected personal resume excerpts. Public retention reviewed; no account-specific ZDR guarantee assumed. Keep .50+ supported decisions visible for explicit review, mark below .90 uncertain, retain provenance and submission approval. Local positional PDF extraction uses pinned pdfplumber and parser rules-v3-layout; reupload refreshes old parsing. Evidence: `evidence/jev-live-pilot-2026-10-11.json`. History: `D:/Projects/Sessions/11-10-2026/turio-jev-live-pilot.md`.
+### ADR-043 ? Authorized provider pilot and review-only uncertainty
+Date: 2026-10-11. Status: accepted by explicit user instruction; superseded 2026-10-26 by the TypeSafe removal.
+The user authorized the supplied server credential, synthetic fixture tests, and selected personal resume excerpts. Public retention reviewed; no account-specific ZDR guarantee assumed. Keep .50+ supported decisions visible for explicit review, mark below .90 uncertain, retain provenance and submission approval. Local positional PDF extraction uses pinned pdfplumber and parser rules-v3-layout; reupload refreshes old parsing. Evidence: the live-pilot record was deleted with the TypeSafe removal. History: `D:/Projects/Sessions/11-10-2026/turio-jev-live-pilot.md`.

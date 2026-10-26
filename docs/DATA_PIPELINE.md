@@ -24,7 +24,7 @@ and repeated headers, and copies source-stated supplemental facts. No fixed
 resume template or Google service. Bounded unreadable text pages fail safely;
 scanned images need searchable text supplied outside this pipeline.
 
-Optional Jev Choice assistance classifies unfamiliar headings from bounded
+Optional AI Choice assistance classifies unfamiliar headings from bounded
 source excerpts with per-action consent, never PDF bytes. Suggestions are not
 automatically persisted: accept into the editor and save with the expected
 profile version. Account email and sensitive declarations are not inferred.

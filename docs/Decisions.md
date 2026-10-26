@@ -31,4 +31,4 @@ Browser display configuration, UTF-8 research tooling and measured local optimiz
 
 Browser availability UX (September 17): expose the adapter's existing configuration/URL gate through an owner-scoped read endpoint, without opening a browser. Do not enable unvalidated live automation to hide the disabled message. Parser upgrades are opt-in through upload/review, not automatic profile overwrites. See [[evidence/profile-company-usability-2026-09-17]].
 
-Opt-in bounded Jev decisions, source-backed review, atomic freshness and retained provenance: [ADR-041](ADR.md#adr-041--opt-in-bounded-jev-assistance). Live requests require separately reviewed retention terms/pilot authorization. See JEV_ASSISTANCE.md.
+Opt-in bounded AI decisions, source-backed review, atomic freshness and retained provenance: [ADR-041](ADR.md#adr-041--opt-in-bounded-ai-assistance). Live requests require separately reviewed retention terms/pilot authorization. The legacy TypeSafe provider and its `JEV_ASSISTANCE.md` document were removed on 2026-10-26; OpenRouter is the only provider.

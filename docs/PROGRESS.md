@@ -24,7 +24,7 @@ Publication outcome: [shared history](D:/Projects/Sessions/16-10-2026/turio-gith
 - `[!]` blocked/needs decision
 
 ## OpenRouter free provider — October 13, 2026
-[x] Active assistance switched from TypeSafe to fixed free Dots via OpenRouter;
+[x] Active assistance uses fixed free Dots via OpenRouter (legacy TypeSafe removed 2026-10-26);
 root `.env` key alias preserved server-side, no credential copy. Strict choices,
 unavailable/null scores, explicit review and all bulk/owner/version guards retained.
 Liquid free endpoint rejected privacy filter; selected a compliant responding
@@ -37,24 +37,24 @@ Native provider flag updated/restarted, health/login200, schema/data retained.
 No personal PDF transfer, actual employer submission, commits or pushes.
 Evidence: [OpenRouter free](evidence/openrouter-free-2026-10-13.json).
 
-## Jev interpretation and bulk modes — October 13, 2026
+## AI interpretation and bulk modes — October 13, 2026
 [x] Expanded consented source-fact classification and explicit review-only proposals;
-Jev-complete sections replace local grouping, incomplete sections retain fallback.
+AI-complete sections replace local grouping, incomplete sections retain fallback.
 [x] Default fill-and-review/eligible automatic bulk modes, per-job fields/holds,
 immutable approval binding, 15-minute expiry, safe skips/stop and no uncertain
 submission retry. Existing per-job approval API retained; hosted final submission
 remains manual. No actual employer submissions.
 
 Fresh evidence: **342 backend passed/33 skipped; 60 PostgreSQL passed; one live
-synthetic Jev test passed; frontend typecheck/build and 14 intercepted UI groups
+synthetic AI test passed; frontend typecheck/build and 14 intercepted UI groups
 passed**. Policy helper check passed using Node native TypeScript. Native stack
 restarted with health/login 200; no schema/data reset or personal sample-profile
 write. Author self-review only; changes uncommitted. Evidence:
-[Jev/bulk modes](evidence/jev-bulk-modes-2026-10-13.json).
+The AI/bulk evidence record was deleted with the 2026-10-26 TypeSafe removal.
 
 ## Resume layouts checkpoint — October 13, 2026
 
-[x] Local positional PDF extraction plus Jev-only section assistance (ADR-044),
+[x] Local positional PDF extraction plus AI-only section assistance (ADR-044),
 no Google service. `rules-v5-multipage` covers tested page/column layouts, contact
 and project boundaries, supplemental editable profile facts and unreadable-page
 rejection before replacement. Reupload older resumes once and review corrections.
@@ -65,7 +65,7 @@ production build/typecheck and **four intercepted UI groups** pass. Native
 migration `a231013001` applied; API/frontend/worker restarted, health/login 200.
 The supplied two-page PDF retains five projects, four certifications and one
 achievement in local-only QA; the account/profile was not populated with sample
-values. No visual QA, live supplemental Jev call, universal-PDF accuracy or
+values. No visual QA, live supplemental AI call, universal-PDF accuracy or
 full-project completion claim. Author self-review only; changes uncommitted.
 Evidence: [private resume-layout evidence availability](SECURITY_PRIVACY.md#private-verification-evidence). Shared history:
 `D:/Projects/Sessions/13-10-2026/turio-resume-layouts.md`.
@@ -682,14 +682,14 @@ human effectiveness and real-company validation remain open. No synthetic intake
 freeze/evaluation or real submission. Matrix: [[DELIVERY_STATUS]]. Evidence:
 [[evidence/phase-tooling-2026-09-17]].
 
-## Jev milestones — 2026-10-11
+## AI assistance milestones — 2026-10-11
 - [x] Owner-scoped mocked resume-heading suggestions, consent/source evidence and atomic expected-version saves.
-- [x] Opt-in unfamiliar form mapping, explicit confirmation, versioned provenance, no general Jev-answer reuse.
+- [x] Opt-in unfamiliar form mapping, explicit confirmation, versioned provenance, no general AI-answer reuse.
 - [x] Strict pinned adapter and request/response limits; PostgreSQL concurrency and intercepted UI verification.
 - [ ] Separately authorize live pilot after applicable account retention/DPA review; human benchmark/live-company gates unchanged.
-See JEV_ASSISTANCE.md and D:/Projects/Sessions/11-10-2026/turio-jev-completion.md for evidence/limits.
+See D:/Projects/Sessions/11-10-2026/turio-jev-completion.md for history; the assistance document was deleted on 2026-10-26.
 
 Final checks: default backend 255 passed/22 opt-in skips; isolated PostgreSQL 18
 passed; intercepted native-browser fixtures 17 passed/one cleanup warning;
 production UI four groups/zero page errors; production build passed. Evidence:
-[jev-functional-2026-10-11.json](evidence/jev-functional-2026-10-11.json).
+The functional evidence record was deleted with the 2026-10-26 TypeSafe removal.

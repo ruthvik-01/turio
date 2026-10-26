@@ -29,7 +29,7 @@ export async function api<T>(path: string, options: RequestInit = {}): Promise<T
 }
 export function requestKey(): Record<string, string> { return { "Idempotency-Key": crypto.randomUUID() }; }
 
-export type ApplicationAnswerInput = { field_id: string; value: Field["value"]; user_confirmed: boolean; save_for_reuse: boolean; jev_confirmed?: boolean };
+export type ApplicationAnswerInput = { field_id: string; value: Field["value"]; user_confirmed: boolean; save_for_reuse: boolean; ai_confirmed?: boolean };
 
 /** Retry a stale save only when its edited fields still match the user's baseline. */
 export async function saveApplicationAnswers(application: Application, answers: ApplicationAnswerInput[], headers = requestKey()): Promise<Application> {
@@ -46,7 +46,7 @@ export async function saveApplicationAnswers(application: Application, answers: 
     const safe = answers.every(item => {
       const before = application.fields.find(field => field.id === item.field_id);
       const now = latest.fields.find(field => field.id === item.field_id);
-      return before && now && ["field_key", "label", "input_type", "required", "normalized_intent", "options", "help_text", "value_source", "user_confirmed", "jev_confidence", "jev_winner_probability", "jev_uncertain"]
+      return before && now && ["field_key", "label", "input_type", "required", "normalized_intent", "options", "help_text", "value_source", "user_confirmed", "ai_confidence", "ai_winner_probability", "ai_uncertain"]
         .every(key => same(before[key as keyof Field], now[key as keyof Field])) && same(before.value, now.value);
     });
     if (!editable || !safe) throw new ApiError("These fields changed elsewhere. Your edits are still on screen. Check status to load the latest answers before saving again.", 409, "STALE_REVISION");

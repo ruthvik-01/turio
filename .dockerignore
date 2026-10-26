@@ -1,0 +1,50 @@
+# Build context is the repository root (see backend/Dockerfile).
+.git
+.gitignore
+.gitattributes
+.github
+
+# Never send secrets or local runtime state into the build context.
+.env
+.env.*
+!.env.example
+.runtime/
+.verification/
+.local/
+.pi/
+.playwright-mcp/
+.vscode/
+graphify-out/
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+backend/.venv/
+backend/.model-cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+
+# Node / Next.js (the frontend has its own .dockerignore)
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+frontend/.verification/
+**/*.tsbuildinfo
+**/next-env.d.ts
+
+# Local data and generated artifacts. data/ is ~1 GB of CSVs; the dataset is
+# mounted read-only at runtime instead of baked into the image.
+data/
+experiments/
+*.zip
+*.docx
+*.pdf
+*.png
+*.jpg
+
+# Local tooling state
+.pytest_cache/
+.runtime/
+docs/evidence/

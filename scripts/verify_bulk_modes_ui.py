@@ -55,7 +55,7 @@ async def main(url, output):
             elif action == 'start':
                 apps[i]['status'] = 'needs_input' if i == 4 else 'ready_for_review'
                 if i == 4:
-                    apps[i]['fields'][0].update(value_source='jev_profile', user_confirmed=False)
+                    apps[i]['fields'][0].update(value_source='ai_profile', user_confirmed=False)
                     apps[i]['missing_fields'] = ['Full name']
                 data = apps[i]
             elif action == 'review':
@@ -110,7 +110,7 @@ async def main(url, output):
             await page.get_by_text('View filled fields for Engineer 2 at Synthetic Company 2', exact=True).click()
             row = page.locator('.review-box').filter(has=page.get_by_text('Synthetic Company 2 · Engineer 2', exact=True))
             await row.get_by_text('Synthetic Candidate', exact=True).wait_for()
-            checks.append('default review mode, per-job field preview and explicit per-batch Jev consent reset')
+            checks.append('default review mode, per-job field preview and explicit per-batch AI consent reset')
             await automatic()
             await submit.click()
             await page.get_by_text('Automatic batch finished.', exact=False).wait_for()

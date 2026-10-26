@@ -24,8 +24,8 @@ async def main(url, output):
     prefix = '/api/applications/' + app_id
     field = {'id': 'phone', 'field_key': 'phone', 'label': 'Best number to reach you', 'input_type': 'tel',
         'required': True, 'normalized_intent': 'phone', 'options': [], 'value': '123',
-        'value_source': 'jev_profile', 'user_confirmed': False, 'jev_uncertain': True,
-        'jev_confidence': None, 'jev_winner_probability': None}
+        'value_source': 'ai_profile', 'user_confirmed': False, 'ai_uncertain': True,
+        'ai_confidence': None, 'ai_winner_probability': None}
     app = {'id': app_id, 'job': {'id': 'job', 'title': 'Synthetic Engineer', 'company': 'Synthetic Fixture', 'company_logo_url': None},
         'application_url': 'https://employer.invalid/never-opened', 'status': 'needs_input',
         'outcome': None, 'notes': None, 'resume_id': resume['id'], 'fields': [field], 'missing_fields': ['Phone'],
@@ -58,7 +58,7 @@ async def main(url, output):
             data = {'resume_id': resume['id'], 'resume_checksum': resume['checksum'], 'profile_version': profile['version'],
                 'model': 'dots-studio/dots-3-note-preview:free', 'provider': 'openrouter', 'status': 'complete', 'overflow': 0, 'unresolved': 0,
                 'suggestions': [{'id': 'heading', 'heading': 'Toolbox', 'excerpt': 'Toolbox\nPython, SQL', 'section': 'skills',
-                    'confidence': None, 'winner_probability': None, 'uncertain': True}], 'suggested_fields': {'skills': ['Python', 'SQL'], 'certifications': ['Jev Source Certificate']}}
+                    'confidence': None, 'winner_probability': None, 'uncertain': True}], 'suggested_fields': {'skills': ['Python', 'SQL'], 'certifications': ['AI Source Certificate']}}
         elif parsed.path == prefix: data = app
         elif parsed.path == prefix + '/capability': data = {'available': True, 'reason': None}
         elif parsed.path == prefix + '/start': data = app
@@ -101,10 +101,10 @@ async def main(url, output):
         await page.get_by_role('button', name='Use suggested changes in editor').click()
         await page.get_by_text('Suggested changes are in the editor.', exact=False).wait_for()
         assert await page.get_by_label('Skills', exact=False).input_value() == 'Python, SQL'
-        assert await page.get_by_label('Certifications', exact=False).input_value() == 'Jev Source Certificate'
+        assert await page.get_by_label('Certifications', exact=False).input_value() == 'AI Source Certificate'
         await page.get_by_role('button', name='Save profile', exact=True).click()
         await page.get_by_text('Profile saved.', exact=False).wait_for()
-        assert profile['certifications'] == ['Jev Source Certificate']
+        assert profile['certifications'] == ['AI Source Certificate']
         assert profile['contact_email'] == 'contact@example.com'
         checks.append('per-action consent, source evidence, supplemental merge, dirty-edit guard and versioned save')
         await consent.check(); await suggest.click()
@@ -123,14 +123,14 @@ async def main(url, output):
         assert not await confirm.is_checked()
         await page.get_by_role('button', name='Save answers', exact=True).click()
         await page.get_by_text('Application updated.', exact=True).wait_for()
-        assert requests[-1]['body']['answers'][0]['jev_confirmed'] is False
+        assert requests[-1]['body']['answers'][0]['ai_confirmed'] is False
         await confirm.check(); await page.get_by_role('button', name='Save answers', exact=True).click()
         await page.get_by_text('Application updated.', exact=True).wait_for()
-        assert requests[-1]['body']['answers'][0]['jev_confirmed'] is True
+        assert requests[-1]['body']['answers'][0]['ai_confirmed'] is True
         await page.get_by_text('View filled answers', exact=False).click()
         await page.get_by_role('button', name='Edit saved answers', exact=True).click()
         await phone.fill('789'); assert not await confirm.is_checked()
-        checks.append('Jev confirmation remains explicit through edits and re-edits')
+        checks.append('AI confirmation remains explicit through edits and re-edits')
         assert 'typesafe' not in (await page.locator('body').inner_text()).lower()
         ai = page.get_by_label('Use AI to suggest unfamiliar field mappings for this action.')
         apply = page.get_by_role('button', name='Apply with Agent', exact=True)
@@ -160,6 +160,6 @@ async def main(url, output):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--url', default='http://127.0.0.1:13001')
-    parser.add_argument('--output', type=Path, default=Path('.runtime/jev/ui'))
+    parser.add_argument('--output', type=Path, default=Path('.runtime/ai/ui'))
     args = parser.parse_args()
     asyncio.run(main(args.url.rstrip('/'), args.output))

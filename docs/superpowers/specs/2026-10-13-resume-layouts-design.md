@@ -1,6 +1,6 @@
 # Multi-page resume extraction
 
-Improve the existing local PDF reader across varied text-PDF layouts, using the supplied two-page resume as an acceptance case without changing the current user's profile. User approved local extraction + Jev only on 2026-10-13; no Google service. Jev receives bounded source excerpts only with the existing explicit per-action consent, never PDF bytes. Its Choice API classifies sections; local code selects source-backed facts. Scanned images are not readable by this text-only API.
+Improve the existing local PDF reader across varied text-PDF layouts, using the supplied two-page resume as an acceptance case without changing the current user's profile. User approved local extraction + AI only on 2026-10-13; no Google service. AI receives bounded source excerpts only with the existing explicit per-action consent, never PDF bytes. Its Choice API classifies sections; local code selects source-backed facts. Scanned images are not readable by this text-only API.
 
 - Preserve page order, wrapped paragraphs and section boundaries; remove update notes, page footers and icon-only artifacts.
 - Extract source-backed name, application email, phone, location, links, education, skills and projects. URL digits must never become a phone number; project paragraphs must not become titles.
