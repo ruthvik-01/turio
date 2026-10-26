@@ -3,7 +3,7 @@
 Rules only: no model is involved, so a field the rules cannot establish stays
 `None` rather than being guessed. Several heuristics here deliberately give up
 and return `None` when the input is ambiguous - an empty field is recoverable,
-a confidently wrong one is not (CLAUDE.md section 9).
+a confidently wrong one is not.
 
 Sensitive attributes (work authorization, sponsorship) are never derived from a
 resume at all; they are collected explicitly in a later phase.

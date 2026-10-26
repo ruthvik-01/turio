@@ -128,8 +128,7 @@ async def ingest_resume(
         setattr(profile, name, getattr(parsed, name))
 
     # Never derived from a resume: these are collected explicitly, because
-    # inferring them from a document would be fabricating a legal declaration
-    # (CLAUDE.md section 9, PHASE_PLAN.md Phase 5).
+    # inferring them from a document would be fabricating a legal declaration.
     # work_authorization_status and sponsorship_required are deliberately absent
     # from _SCALAR_FIELDS.
 

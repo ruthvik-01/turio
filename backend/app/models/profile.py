@@ -35,8 +35,7 @@ class Profile(Base):
     github_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
     portfolio_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
-    # Sensitive. Only ever set from explicit user input, never inferred
-    # (CLAUDE.md section 9).
+    # Sensitive. Only ever set from explicit user input, never inferred.
     work_authorization_status: Mapped[str | None] = mapped_column(String(128), nullable=True)
     sponsorship_required: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 

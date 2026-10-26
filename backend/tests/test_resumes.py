@@ -188,7 +188,7 @@ async def test_empty_sections_produce_empty_values_never_invented_ones(
 async def test_work_authorization_is_never_inferred_from_a_resume(
     client: AsyncClient, make_pdf: Callable[[str], bytes]
 ) -> None:
-    """CLAUDE.md section 9: sensitive facts are collected, never derived."""
+    """Sensitive facts are collected, never derived."""
     headers = await auth_headers(client)
     text = (
         "Jane Doe\njane.doe@example.com\n\n"

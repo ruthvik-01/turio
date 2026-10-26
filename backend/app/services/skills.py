@@ -6,7 +6,7 @@ and two sides that normalise differently would compare unequal strings for the
 same skill.
 
 Matching is exact whole-word against the lexicon. Nothing is inferred, so a
-skill that is absent stays absent (CLAUDE.md section 9).
+skill that is absent stays absent.
 """
 
 import re
