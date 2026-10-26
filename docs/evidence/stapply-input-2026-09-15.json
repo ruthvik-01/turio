@@ -1,8 +1,0 @@
-{
-  "file": "data/ashby-jobs.csv",
-  "bytes": 339345623,
-  "sha256": "2e57b5baf89df8b0dafd7f87a62c4c46fc329ea33d8315f8a391b585d89dd9d1",
-  "rows": 55194,
-  "source_file_modified": false,
-  "normalization_note": "One NUL-bearing description is normalized for PostgreSQL, with reversible raw provenance."
-}
