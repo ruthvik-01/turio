@@ -127,7 +127,10 @@ async def serve(factory, worker_id=None):
 
 async def main(once):
     configure_logging()
-    engine = create_engine(get_settings().database_url)
+    # Ranking reads and encodes the whole inventory, which outlasts the
+    # server's interactive statement timeout. The worker is the one caller
+    # that legitimately needs longer.
+    engine = create_engine(get_settings().database_url, statement_timeout_ms=1_800_000)
     try:
         factory = create_session_factory(engine)
         if once:
