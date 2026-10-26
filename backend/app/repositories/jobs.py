@@ -159,9 +159,13 @@ async def list_jobs(
     limit: int = 20,
     offset: int = 0,
 ) -> tuple[list[Job], int]:
-    """Filtered page of jobs plus the total matching count."""
-    statement = select(Job)
-    counter = select(func.count()).select_from(Job)
+    """Filtered page of jobs plus the total matching count.
+
+    The total comes from a window function on the same query rather than a
+    second `count(*)`: the database is remote, so two round trips cost twice
+    the latency of one regardless of how cheap the count is.
+    """
+    statement = select(Job).add_columns(func.count().over().label("total_count"))
 
     filters = [eligible()]
     if query:
@@ -178,10 +182,14 @@ async def list_jobs(
 
     for condition in filters:
         statement = statement.where(condition)
-        counter = counter.where(condition)
 
     statement = statement.order_by(Job.company, Job.title, Job.id).limit(limit).offset(offset)
 
-    rows = (await session.execute(statement)).scalars().all()
-    total = int((await session.execute(counter)).scalar_one())
-    return list(rows), total
+    result = (await session.execute(statement)).all()
+    if not result:
+        # An empty page carries no window value, but the caller still needs the
+        # count for its pagination and empty state.
+        total = int((await session.execute(
+            select(func.count()).select_from(Job).where(*filters))).scalar_one())
+        return [], total
+    return [row[0] for row in result], int(result[0][1])

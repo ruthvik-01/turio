@@ -79,8 +79,18 @@ def to_profile_data(profile: Profile, entities: ProfileEntities) -> ProfileWithE
 async def get_profile(session: AsyncSession, *, user_id) -> ProfileWithEntities:
     profile = await profile_repo.get_or_create(session, user_id)
     entities = await profile_repo.load_entities(session, user_id)
-    await session.commit()
     return to_profile_data(profile, entities)
+
+
+async def get_profile_version(session: AsyncSession, *, user_id) -> int:
+    """Just the version, for callers that only compare it.
+
+    `get_profile` loads four entity sets and commits; ranking and match
+    staleness checks need the version alone and were paying for all of it.
+    """
+    profile = await profile_repo.get_or_create(session, user_id)
+    await session.commit()
+    return profile.version
 
 
 async def update_profile(

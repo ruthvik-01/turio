@@ -16,7 +16,7 @@ from app.repositories import jobs as job_repo
 from app.repositories import matching as repo
 from app.schemas.matching import MatchData, MatchPage
 from app.services.jobs import to_job_data
-from app.services.profile import get_profile
+from app.services.profile import get_profile, get_profile_version
 
 
 def config_identity(config: dict) -> str:
@@ -102,10 +102,10 @@ async def generate(session: AsyncSession, user_id: UUID, method: str = "sbert", 
 
 
 async def list_matches(session: AsyncSession, user_id: UUID, method: str, limit: int = 20, offset: int = 0) -> MatchPage:
-    profile = await get_profile(session, user_id=user_id)
+    profile_version = await get_profile_version(session, user_id=user_id)
     fingerprint = await job_repo.inventory_fingerprint(session)
     signature = config_identity(load_config())
-    rows, total, stale = await repo.match_page(session, user_id, method, profile.version, fingerprint, signature, limit, offset)
+    rows, total, stale = await repo.match_page(session, user_id, method, profile_version, fingerprint, signature, limit, offset)
     return MatchPage(matches=[to_data(row, job) for row, job in rows], total=total,
                      limit=limit, offset=offset, method=method, stale=stale)
 
@@ -114,7 +114,7 @@ async def detail(session: AsyncSession, user_id: UUID, match_id: UUID) -> MatchD
     row = await repo.owned_match(session, user_id, match_id)
     if row is None:
         raise AppError("NOT_FOUND", "No match with that id.", 404)
-    profile = await get_profile(session, user_id=user_id)
-    if row.profile_version != profile.version or row.inventory_hash != await job_repo.inventory_fingerprint(session) or row.ranking_config_version != config_identity(load_config()):
+    profile_version = await get_profile_version(session, user_id=user_id)
+    if row.profile_version != profile_version or row.inventory_hash != await job_repo.inventory_fingerprint(session) or row.ranking_config_version != config_identity(load_config()):
         raise AppError("CONFLICT", "This recommendation is stale. Refresh your matches.", 409)
     return to_data(row, await job_repo.get_by_id(session, row.job_id))

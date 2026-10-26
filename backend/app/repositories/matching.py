@@ -44,19 +44,29 @@ async def replace_matches(session: AsyncSession, user_id: UUID, method: str, row
 
 
 async def user_matches(session: AsyncSession, user_id: UUID, method: str) -> list[JobMatch]:
-    rows = await session.execute(select(JobMatch).join(Job, Job.id == JobMatch.job_id).where(eligible(), JobMatch.user_id == user_id, JobMatch.method == method).order_by(JobMatch.final_score.desc(), JobMatch.job_id))
-    return list(rows.scalars())
+    # Only the three staleness columns are read by the caller. Selecting whole
+    # rows would drag every `explanation_payload` JSONB across the network.
+    rows = await session.execute(select(
+        JobMatch.profile_version, JobMatch.inventory_hash, JobMatch.ranking_config_version,
+    ).join(Job, Job.id == JobMatch.job_id).where(
+        eligible(), JobMatch.user_id == user_id, JobMatch.method == method))
+    return list(rows.all())
 
 
 async def match_page(session, user_id, method, profile_version, inventory_hash, signature, limit, offset):
     conditions = [eligible(), JobMatch.user_id == user_id, JobMatch.method == method]
-    counts = select(func.count()).select_from(JobMatch).join(Job, Job.id == JobMatch.job_id)
-    total = await session.scalar(counts.where(*conditions))
-    conditions += [JobMatch.profile_version == profile_version, JobMatch.inventory_hash == inventory_hash,
-                   JobMatch.ranking_config_version == signature]
-    fresh = await session.scalar(counts.where(*conditions))
+    fresh_conditions = conditions + [JobMatch.profile_version == profile_version,
+                                     JobMatch.inventory_hash == inventory_hash,
+                                     JobMatch.ranking_config_version == signature]
+    # One scan answers both counts. They used to be two separate full scans of
+    # the user's matches, and this endpoint runs on every page view.
+    counts = select(
+        func.count(),
+        func.count().filter(*fresh_conditions),
+    ).select_from(JobMatch).join(Job, Job.id == JobMatch.job_id).where(*conditions)
+    total, fresh = (await session.execute(counts)).one()
     rows = (await session.execute(select(JobMatch, Job).join(Job, Job.id == JobMatch.job_id)
-        .where(*conditions).order_by(JobMatch.final_score.desc(), JobMatch.job_id).limit(limit).offset(offset))).all()
+        .where(*fresh_conditions).order_by(JobMatch.final_score.desc(), JobMatch.job_id).limit(limit).offset(offset))).all()
     return rows, fresh, fresh != total
 
 
