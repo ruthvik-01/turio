@@ -3,7 +3,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint, Uuid
+from sqlalchemy import Computed, ForeignKey, String, Text, UniqueConstraint, Uuid
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.time import utcnow
@@ -52,6 +52,16 @@ class Job(Base):
     # Verbatim source record. Everything the normalised columns do not carry is
     # still here, so a later phase can promote a field without re-ingesting.
     raw_payload: Mapped[dict | None] = mapped_column(JsonB, nullable=True)
+
+    # Availability promoted out of `raw_payload`: reading it there detoasts a
+    # 4 KB jsonb column on every eligibility check, which made a count(*) over
+    # the inventory take 12.5s. The database computes this on write; the
+    # application never assigns it.
+    availability_status: Mapped[str] = mapped_column(
+        String(32),
+        Computed("coalesce(raw_payload->'_turio_availability'->>'status', '')", persisted=True),
+        nullable=False,
+    )
 
     # Changes whenever any normalised field changes, which is what decides
     # whether a re-ingested record is written or skipped

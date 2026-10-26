@@ -1,18 +1,42 @@
 """Job and job-source persistence."""
 
+from time import monotonic
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, insert, select, update
+from sqlalchemy import event, func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import load_only
 
 from app.models.job import Job, JobSource
 from app.core.time import utcnow
 
+# The inventory fingerprint aggregates every eligible row, so recomputing it on
+# each recommendation request costs seconds. Cached per process and reset by the
+# writes below; the TTL bounds staleness from deadlines passing with no write.
+# Long, because a miss costs more than the staleness it prevents: the only thing
+# that changes without a write is a deadline passing.
+_FINGERPRINT_TTL_SECONDS = 900.0
+_fingerprint: tuple[float, str] | None = None
+
+
+def invalidate_fingerprint() -> None:
+    global _fingerprint
+    _fingerprint = None
+
+
+@event.listens_for(Job, "after_insert")
+@event.listens_for(Job, "after_update")
+@event.listens_for(Job, "after_delete")
+def _invalidate_on_job_write(*_args) -> None:
+    invalidate_fingerprint()
+
 
 def eligible():
+    # Reads the generated column, not raw_payload: the latter is a 4 KB jsonb
+    # column kept out of line, and detoasting it per row made this filter
+    # dominate every inventory query.
     return (Job.application_deadline.is_(None) | (Job.application_deadline >= utcnow())) & (
-        func.coalesce(Job.raw_payload["_turio_availability"]["status"].as_string(), "") != "closed")
+        Job.availability_status != "closed")
 
 
 def available(job):
@@ -26,6 +50,7 @@ async def mark_unavailable(session, job_id, reason):
         job.raw_payload = {**(job.raw_payload or {}), "_turio_availability": {
             "status": "closed", "reason": reason, "checked_at": utcnow().isoformat()}}
         await session.flush()
+        invalidate_fingerprint()
 
 
 async def get_or_create_source(
@@ -61,6 +86,7 @@ async def insert_many(
         return {}
     values = [{"id": uuid4(), "source_id": source_id, **row} for row in rows]
     await session.execute(insert(Job), values)
+    invalidate_fingerprint()
     return {row["external_id"]: (row["id"], row["content_hash"]) for row in values}
 
 
@@ -71,6 +97,7 @@ async def update_one(session: AsyncSession, job_id: UUID, values: dict) -> None:
         # A static CSV edit is not evidence that an employer reopened a posting.
         values = {**values, "raw_payload": {**(values.get("raw_payload") or {}), "_turio_availability": closed}}
     await session.execute(update(Job).where(Job.id == job_id).values(**values))
+    invalidate_fingerprint()
 
 
 async def get_by_id(session: AsyncSession, job_id: UUID) -> Job | None:
@@ -94,6 +121,17 @@ async def matching_jobs(session: AsyncSession) -> list[Job]:
 
 
 async def inventory_fingerprint(session: AsyncSession) -> str:
+    global _fingerprint
+    cached = _fingerprint
+    if cached is not None and monotonic() - cached[0] < _FINGERPRINT_TTL_SECONDS:
+        return cached[1]
+
+    value = await _compute_fingerprint(session)
+    _fingerprint = (monotonic(), value)
+    return value
+
+
+async def _compute_fingerprint(session: AsyncSession) -> str:
     from app.ml.scoring import digest
 
     if session.bind is not None and session.bind.dialect.name == "postgresql":

@@ -15,6 +15,7 @@ from app.core.logging import configure_logging
 from app.core.middleware import RequestIdMiddleware
 from app.core.storage import ObjectStorage
 from app.core.body_limit import BodyLimitMiddleware
+from app.repositories import jobs as job_repo
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         secret_key=settings.object_storage_secret_key,
         region=settings.object_storage_region,
         bucket=settings.object_storage_bucket,
+        ensure_bucket=settings.object_storage_ensure_bucket,
     )
+
+    # The first inventory fingerprint costs seconds, and every recommendation
+    # request needs it. Paying that on the first request instead pushes it past
+    # the proxy's timeout, so warm it here where a slow start is tolerable.
+    try:
+        async with app.state.session_factory() as session:
+            await job_repo.inventory_fingerprint(session)
+    except Exception:
+        # A cold cache is a slow request, not a failed boot.
+        logger.warning("fingerprint_warmup_failed", exc_info=True)
 
     logger.info("application_started")
     try:
