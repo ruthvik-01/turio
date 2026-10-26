@@ -7,9 +7,6 @@ keyword/TF-IDF/SBERT recommendations. Prepare and track applications using saved
 Browser assistance is experimental and disabled by default; final submission always needs
 explicit approval. No employer workflow or human matching effectiveness is yet verified.
 
-See [current project context](docs/PROJECT_CONTEXT.md) and [delivery status](docs/DELIVERY_STATUS.md)
-for implemented functionality and remaining acceptance gates.
-
 ## AI interpretation and bulk applications
 Current assistance uses fixed free OpenRouter `dots-studio/dots-3-note-preview:free`;
 server-only root `.env` key (`OPENROUTER_API_KEY` or existing `Open_Router`). Unknown
@@ -23,9 +20,8 @@ model confidence is shown as unavailable; there is no paid provider fallback.
   holds, missing/unconfirmed facts, changed/expired snapshots and hosted/manual
   forms are skipped. Approval expires after 15 minutes; uncertain submissions do
   not retry. Hosted Ashby final submission/CAPTCHA remain manual.
-- Assistance is opt-in via `ASSISTANCE_ENABLED`; OpenRouter is the only provider. See [ADR-041](docs/ADR.md).
-  Functional evidence: [OpenRouter checks](docs/evidence/openrouter-free-2026-10-13.json);
-  this is not real-company support or a speed/accuracy benchmark.
+- Assistance is opt-in via `ASSISTANCE_ENABLED`; OpenRouter is the only provider.
+  This is not real-company support or a speed/accuracy benchmark.
 
 ## Repository layout
 
@@ -33,7 +29,6 @@ model confidence is shown as unavailable; there is no paid provider fallback.
 backend/     FastAPI routes, schemas, services, repositories, models and worker
 frontend/    Next.js App Router application
 alembic/     PostgreSQL migrations
-docs/        Specifications, decisions and verification evidence
 scripts/     Native startup, imports, evaluation and verification
 experiments/ Research tooling and local inputs
 .runtime/    Ignored local services, private settings, logs and persistent data
@@ -70,7 +65,7 @@ existing builds are reused. Rebuild explicitly after frontend source changes.
 **Fresh checkout:** `.runtime/native/` is private, ignored local state, not a bundled installation.
 PostgreSQL, storage, the database, credentials and application dependencies must be provisioned
 before this launcher works. It fails before creating runtime state when prerequisites are absent.
-See [native deployment requirements](docs/DEPLOYMENT.md). Never commit `env.json`, database files,
+Never commit `env.json`, database files,
 resumes or provider credentials. This native database does not recover the missing old WSL data.
 
 ## Development and tests
@@ -89,9 +84,7 @@ From `backend/`, run:
 ```
 
 Default tests use isolated SQLite/storage fixtures and require neither a running PostgreSQL
-server nor Docker. Dedicated PostgreSQL integration tests use a separate `turio_test_` database;
-see [deployment](docs/DEPLOYMENT.md). GitHub Actions retains its isolated PostgreSQL service
-container; that does not require Docker on a developer's machine.
+server nor Docker. Dedicated PostgreSQL integration tests use a separate `turio_test_` database.
 
 Frontend commands, from `frontend/`:
 
@@ -125,9 +118,6 @@ Missing assets fail explicitly. Baselines work without the optional model.
 - `TURIO_BROWSER_TESTS=1` enables intercepted native-browser fixtures after installing
   `backend/requirements-browser.txt` and Chromium. These do not establish live employer support.
 - Do not enable live automation merely because a company appears in the inventory.
-- Research inputs and annotation requirements: [experiments/README.md](experiments/README.md).
   Synthetic tests are not human effectiveness results.
 
-Start documentation with [docs/README.md](docs/README.md) and [docs/CLAUDE.md](docs/CLAUDE.md).
-Historical Docker/Compose evidence is retained, but local container files and helpers were removed
-under [ADR-042](docs/ADR.md#adr-042--native-windows-development-without-local-docker).
+Historical Docker/Compose evidence is retained, but local container files and helpers were removed.
